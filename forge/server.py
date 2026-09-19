@@ -944,7 +944,9 @@ def ai_context(kind, ident):
             parts.append("LOG EXCERPT (around the first error):\n" + log_excerpt(j["repo"], j["id"]))
         y = workflow_yaml(j["repo"], r.get("path"), r.get("head_sha"))
         if y:
-            parts.append(f"WORKFLOW FILE {r.get('path')}:\n{y}")
+            note = ("\n(Note: this job's name has a \"caller / job\" shape, so its steps are defined in a "
+                    "reusable workflow this file calls — not in the file below.)" if " / " in (j["name"] or "") else "")
+            parts.append(f"WORKFLOW FILE {r.get('path')}{note}:\n{y}")
         return f"{job_base(j['name'])} · {r.get('name')}", "\n".join(parts), f"{j['status']}:{j['conclusion']}"
 
     if kind == "run":
@@ -976,6 +978,13 @@ def ai_context(kind, ident):
         if su["last_failure"]:
             parts.append(f"Most recent failure {su['last_failure']['created_at']} on {su['last_failure']['branch']}: "
                          + "; ".join(su["last_failure"]["failures"][:10]))
+        if su["last_failure"]:
+            # The question people actually ask about a suite is "why did it fail?",
+            # so carry the same evidence a single-job explanation gets.
+            jb = db.one("SELECT * FROM jobs WHERE id=?", (su["last_failure"]["id"],))
+            if jb:
+                parts.append("Steps of that failed run:\n" + fmt_steps(json.loads(jb["steps"] or "[]")))
+                parts.append("LOG EXCERPT from that failure:\n" + log_excerpt(su["repo"], jb["id"]))
         r = db.one("SELECT r.path, r.head_sha FROM jobs j JOIN runs r ON r.id=j.run_id WHERE j.id=?", (su["last"]["id"],)) or {}
         y = workflow_yaml(su["repo"], r.get("path"), r.get("head_sha"))
         if y:
