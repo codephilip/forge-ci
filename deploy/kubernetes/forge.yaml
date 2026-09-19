@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: forge-data
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: forge
+  labels: { app: forge }
+spec:
+  replicas: 1
+  # SQLite on a ReadWriteOnce volume: never run two pods against it.
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: forge }
+  template:
+    metadata:
+      labels: { app: forge }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+      containers:
+        - name: forge
+          image: ghcr.io/codephilip/forge-ci
+          ports:
+            - { name: http, containerPort: 8080 }
+          env:
+            - { name: FORGE_URL, value: "http://forge.example.internal" }
+            # Everything else (GITHUB_TOKEN, FORGE_REPOS, optional AI/email/Prometheus
+            # settings) comes from the Secret — see docs/configuration.md.
+          envFrom:
+            - secretRef: { name: forge-secrets }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 20m, memory: 64Mi }
+            limits: { memory: 384Mi }
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: forge-data }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: forge
+spec:
+  selector: { app: forge }
+  ports:
+    - { name: http, port: 80, targetPort: http }
+---
+# Forge has no login of its own. Expose it only on a private network, or put an
+# authenticating proxy (oauth2-proxy, Cloudflare Access, Tailscale) in front.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: forge
+spec:
+  rules:
+    - host: forge.example.internal
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: forge, port: { number: 80 } }

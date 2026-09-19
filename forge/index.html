@@ -1,0 +1,898 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Forge · CI</title>
+<link rel="icon" id="favicon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07090d; --bg2:#0c0f15; --panel:#10141c; --panel2:#141925; --line:#1d2330; --line2:#272f3f;
+  --text:#e8ebf2; --muted:#8b93a7; --dim:#5b6376;
+  --pass:#3ddc97; --fail:#ff5d6c; --run:#ffb547; --queue:#8ea2ff; --skip:#5b6376; --cancel:#8b93a7;
+  --ember:#ff7a3d; --glow:rgba(255,122,61,.35);
+  --sans:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --r:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 var(--sans);-webkit-font-smoothing:antialiased}
+body{min-height:100vh;
+  background:
+    radial-gradient(1200px 500px at 12% -10%, rgba(255,122,61,.10), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(142,162,255,.08), transparent 60%),
+    var(--bg);}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1480px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-left)) 48px}
+.mono{font-family:var(--mono);font-feature-settings:"zero" 1}
+.muted{color:var(--muted)} .dim{color:var(--dim)}
+
+/* ---------- top bar ---------- */
+header{position:sticky;top:0;z-index:20;backdrop-filter:blur(14px) saturate(140%);
+  background:rgba(7,9,13,.72);border-bottom:1px solid var(--line);margin:0 calc(-1 * max(16px,env(safe-area-inset-left)));
+  padding:14px max(16px,env(safe-area-inset-left));padding-top:calc(14px + env(safe-area-inset-top,0px))}
+.bar{max-width:1480px;margin:0 auto;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px}
+.mark{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;
+  background:conic-gradient(from 210deg,#ff3d6e,#ff7a3d,#ffb547,#ff7a3d,#ff3d6e);box-shadow:0 0 24px var(--glow)}
+.mark svg{width:18px;height:18px}
+.brand h1{margin:0;font-size:17px;font-weight:800;letter-spacing:.18em}
+.brand small{display:block;color:var(--muted);font-size:11px;letter-spacing:.06em;margin-top:1px}
+.spacer{flex:1}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;border:1px solid var(--line2);
+  background:var(--panel);font-size:12px;color:var(--muted);white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--dim);flex:none}
+.live .dot{background:var(--pass);box-shadow:0 0 0 0 rgba(61,220,151,.6);animation:ping 2s infinite}
+.offline .dot{background:var(--fail)}
+@keyframes ping{0%{box-shadow:0 0 0 0 rgba(61,220,151,.55)}80%,100%{box-shadow:0 0 0 7px rgba(61,220,151,0)}}
+.btn{cursor:pointer;border:1px solid var(--line2);background:var(--panel);color:var(--text);border-radius:9px;
+  padding:6px 11px;font:500 12px var(--sans);transition:.15s}
+.btn:hover{border-color:var(--ember);color:#fff}
+
+/* ---------- hero stats ---------- */
+.hero{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin:22px 0 14px}
+.stat{position:relative;overflow:hidden;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
+  border-radius:var(--r);padding:16px 18px 14px;min-height:108px}
+.stat .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.stat .v{font:700 34px/1.05 var(--mono);margin-top:10px;letter-spacing:-.02em}
+.stat .s{font-size:12px;color:var(--dim);margin-top:6px}
+.stat.hot{border-color:rgba(255,181,71,.35)}
+.stat.hot::after{content:"";position:absolute;inset:auto 0 0 0;height:2px;background:linear-gradient(90deg,transparent,var(--run),transparent);animation:sweep 2.2s linear infinite}
+@keyframes sweep{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.ring{position:absolute;right:16px;top:16px;width:58px;height:58px}
+.v.pass{color:var(--pass)} .v.fail{color:var(--fail)} .v.warn{color:var(--run)}
+
+/* ---------- layout ---------- */
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px;align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.panel>h2{margin:0;padding:14px 18px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
+  font-weight:700;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}
+.panel>h2 .count{font-family:var(--mono);color:var(--text);letter-spacing:0}
+.panel>h2 .right{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:500}
+.stack{display:flex;flex-direction:column;gap:14px}
+
+/* ---------- fleet ---------- */
+.fleet{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-bottom:14px}
+.runner{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;position:relative;overflow:hidden}
+.runner .top{display:flex;align-items:center;gap:10px}
+.runner .nm{font:600 14px var(--mono)}
+.runner .sc{font-size:11px;color:var(--dim);margin-top:2px}
+.state{margin-left:auto;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:6px}
+.state.idle{color:var(--pass);background:rgba(61,220,151,.1)}
+.state.busy{color:var(--run);background:rgba(255,181,71,.12)}
+.state.offline{color:var(--fail);background:rgba(255,93,108,.12)}
+.runner.busy{border-color:rgba(255,181,71,.35);box-shadow:inset 0 0 40px rgba(255,181,71,.05)}
+.runner.offline{border-color:rgba(255,93,108,.35)}
+.runner .job{margin-top:10px;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.runner .job b{color:var(--text);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.chip{font:500 10.5px var(--mono);padding:2px 7px;border-radius:5px;background:var(--bg2);border:1px solid var(--line);color:var(--muted)}
+.chip.hl{color:#ffcfae;border-color:rgba(255,122,61,.35);background:rgba(255,122,61,.08)}
+.host .meters{display:grid;gap:9px;margin-top:12px}
+.meter{display:grid;grid-template-columns:38px 1fr 44px;align-items:center;gap:8px;font-size:11px}
+.meter .l{color:var(--muted);font-weight:600;letter-spacing:.06em}
+.meter .t{height:6px;border-radius:99px;background:var(--bg2);overflow:hidden}
+.meter .f{height:100%;border-radius:99px;background:linear-gradient(90deg,#3ddc97,#ffb547 70%,#ff5d6c);background-size:300px 100%;transition:width .6s}
+.meter .n{text-align:right;font-family:var(--mono)}
+.spark{width:100%;height:34px;margin-top:10px;display:block}
+
+/* ---------- in flight ---------- */
+.flight{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px;padding:14px}
+.fcard{position:relative;border-radius:12px;padding:1px;background:linear-gradient(120deg,rgba(255,181,71,.55),rgba(255,122,61,.15),rgba(142,162,255,.35));
+  background-size:300% 300%;animation:flow 6s ease infinite}
+.fcard.queued{background:linear-gradient(120deg,rgba(142,162,255,.45),rgba(142,162,255,.08));animation:none}
+@keyframes flow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.fin{background:var(--panel2);border-radius:11px;padding:14px 15px}
+.fin .row{display:flex;align-items:center;gap:8px}
+.fin .wf{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fin .jn{font-weight:650;font-size:14.5px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fin .timer{margin-left:auto;font:700 20px var(--mono);color:var(--run);letter-spacing:-.02em}
+.fcard.queued .timer{color:var(--queue)}
+.steps{display:flex;gap:3px;margin-top:12px;height:6px}
+.steps i{flex:1;border-radius:2px;background:var(--line2)}
+.steps i.success{background:var(--pass)} .steps i.failure{background:var(--fail)} .steps i.skipped{background:var(--skip);opacity:.5}
+.steps i.in_progress{background:var(--run);animation:blink 1s ease-in-out infinite alternate}
+@keyframes blink{from{opacity:.45}to{opacity:1}}
+.fin .cur{font-size:12px;color:var(--muted);margin-top:8px;display:flex;gap:8px;white-space:nowrap;overflow:hidden}
+.fin .cur span:first-child{overflow:hidden;text-overflow:ellipsis}
+.empty{padding:30px 18px;text-align:center;color:var(--dim)}
+.empty .big{font-size:26px;margin-bottom:4px;opacity:.7}
+
+/* ---------- runs ---------- */
+.filters{display:flex;gap:8px;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--bg2)}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:9px;overflow:hidden}
+.seg button{border:0;background:transparent;color:var(--muted);padding:6px 11px;font:500 12px var(--sans);cursor:pointer}
+.seg button.on{background:var(--panel2);color:#fff}
+select,input[type=search]{background:var(--panel);border:1px solid var(--line2);color:var(--text);border-radius:9px;padding:6px 10px;font:12px var(--sans);min-width:0}
+input[type=search]{flex:1;min-width:140px}
+.runs{overflow-x:auto}
+.run{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .15s}
+.run:hover{background:rgba(255,255,255,.018)}
+.run.open{background:rgba(255,255,255,.025)}
+.run .ti{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.run .meta{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted);margin-top:3px;align-items:center}
+.run .meta .br{font-family:var(--mono);color:#c9d1ff;background:rgba(142,162,255,.1);padding:0 6px;border-radius:5px}
+.run .rt{text-align:right;font-size:12px;color:var(--muted);white-space:nowrap}
+.run .rt .d{font:600 13px var(--mono);color:var(--text)}
+.av{width:16px;height:16px;border-radius:50%;vertical-align:-3px;margin-right:5px}
+.ico{width:22px;height:22px;border-radius:50%;display:grid;place-items:center}
+.ico svg{width:12px;height:12px}
+.ico.success{background:rgba(61,220,151,.14);color:var(--pass)}
+.ico.failure{background:rgba(255,93,108,.15);color:var(--fail)}
+.ico.running{background:rgba(255,181,71,.15);color:var(--run)}
+.ico.running svg{animation:spin 1.1s linear infinite}
+.ico.queued{background:rgba(142,162,255,.14);color:var(--queue)}
+.ico.cancelled,.ico.skipped{background:rgba(139,147,167,.12);color:var(--cancel)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.where{font:600 10px var(--mono);letter-spacing:.04em;padding:1px 6px;border-radius:4px}
+.where.sh{color:#ffcfae;background:rgba(255,122,61,.12)}
+.where.gh{color:var(--muted);background:var(--bg2);border:1px solid var(--line)}
+.where.mix{color:#e5d2ff;background:rgba(170,120,255,.12)}
+.detail{padding:4px 18px 16px 56px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.012)}
+.wfall{display:grid;gap:6px;margin-top:8px}
+.wrow .jn .ai{vertical-align:middle;margin-right:4px}
+.wrow{display:grid;grid-template-columns:minmax(120px,240px) 1fr 70px;gap:12px;align-items:center;font-size:12px}
+.wrow .jn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wrow .jn a:hover{color:#fff;text-decoration:underline}
+.track{position:relative;height:14px;background:var(--bg2);border-radius:4px}
+.track b{position:absolute;top:2px;bottom:2px;border-radius:3px;min-width:3px}
+.track b.success{background:var(--pass)} .track b.failure,.track b.timed_out{background:var(--fail)}
+.track b.in_progress{background:var(--run)} .track b.cancelled,.track b.skipped{background:var(--skip)}
+.wrow .jd{text-align:right;font-family:var(--mono);color:var(--muted)}
+.fstep{grid-column:1/-1;font-size:11.5px;color:#ff9aa4;padding-left:4px;margin-top:-2px}
+.more{padding:12px;text-align:center}
+
+/* ---------- side ---------- */
+.wfl{padding:6px 0}
+.wfi{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:10px 18px;border-bottom:1px solid var(--line)}
+.wfi:last-child{border-bottom:0}
+.wfi .n{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wfi .r{font-size:11px;color:var(--dim)}
+.wfi .pr{font:700 13px var(--mono);text-align:right}
+.beads{display:flex;gap:3px;grid-column:1/-1}
+.beads i{width:10px;height:10px;border-radius:3px;background:var(--line2)}
+.beads i.success{background:var(--pass)} .beads i.failure,.beads i.timed_out,.beads i.startup_failure{background:var(--fail)}
+.chart{padding:16px 18px 12px}
+.bars{display:flex;align-items:flex-end;gap:5px;height:90px}
+.bars .c{flex:1;display:flex;flex-direction:column-reverse;gap:2px;height:100%;justify-content:flex-start;position:relative}
+.bars .c i{display:block;border-radius:3px 3px 1px 1px}
+.bars .c i.p{background:linear-gradient(180deg,#3ddc97,#1f9e6b)} .bars .c i.f{background:linear-gradient(180deg,#ff5d6c,#c73646)}
+.bars .c:hover::after{content:attr(data-t);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);white-space:nowrap;
+  background:#000;border:1px solid var(--line2);padding:3px 7px;border-radius:6px;font:11px var(--mono);margin-bottom:6px;z-index:2}
+.axis{display:flex;justify-content:space-between;font:10px var(--mono);color:var(--dim);margin-top:6px}
+.feed{max-height:340px;overflow:auto}
+.ev{display:flex;gap:10px;padding:10px 18px;border-bottom:1px solid var(--line);font-size:12.5px}
+.ev .b{width:8px;height:8px;border-radius:50%;margin-top:5px;flex:none}
+.ev .t{font-weight:600}
+.ev .d{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px}
+.ev time{margin-left:auto;color:var(--dim);font:11px var(--mono);white-space:nowrap}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;padding:14px 18px;font-size:12.5px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;text-align:right;font-family:var(--mono);overflow:hidden;text-overflow:ellipsis}
+.err{margin:14px 0 0;padding:10px 14px;border:1px solid rgba(255,93,108,.35);background:rgba(255,93,108,.07);border-radius:10px;font-size:12.5px;color:#ffb3ba}
+.err b{color:#fff}
+.toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%) translateY(30px);opacity:0;transition:.3s;
+  background:#000;border:1px solid var(--line2);padding:10px 16px;border-radius:10px;font-size:13px;z-index:50}
+.toast.on{transform:translateX(-50%);opacity:1}
+
+/* ---------- tabs + ask ---------- */
+.tabs{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line2);border-radius:11px;padding:3px}
+.tabs a{padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted)}
+.tabs a.on{background:var(--panel2);color:#fff;box-shadow:inset 0 0 0 1px var(--line2)}
+.tabs a:hover{color:#fff}
+.btn.ask{white-space:nowrap;display:inline-flex;align-items:center;gap:7px;border-color:rgba(170,120,255,.45);background:linear-gradient(135deg,rgba(170,120,255,.16),rgba(142,162,255,.08))}
+.btn.ask:hover{border-color:#b98cff}
+.btn.ask svg{width:14px;height:14px;color:#c9a8ff;flex:none}
+.sdetail li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ---------- AI sparkle button ---------- */
+.ai{flex:none;display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;cursor:pointer;
+  border:1px solid rgba(170,120,255,.32);background:rgba(170,120,255,.08);color:#c9a8ff;padding:0;transition:.15s}
+.ai:hover{background:rgba(170,120,255,.2);border-color:#b98cff;color:#fff;transform:translateY(-1px)}
+.ai svg{width:14px;height:14px}
+.ai.sm{width:22px;height:22px;border-radius:7px}.ai.sm svg{width:12px;height:12px}
+.ai:focus-visible,.btn:focus-visible,.tabs a:focus-visible{outline:2px solid #b98cff;outline-offset:2px}
+
+/* ---------- chat drawer ---------- */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:.2s;z-index:60}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(480px,100vw);z-index:61;background:#0d1017;border-left:1px solid var(--line2);
+  display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s ease;box-shadow:-30px 0 60px rgba(0,0,0,.4);
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.drawer.on{transform:none}
+.dh{display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line)}
+.dh .orb{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:conic-gradient(from 200deg,#8ea2ff,#b98cff,#ff7ab6,#8ea2ff);flex:none}
+.dh .orb svg{width:16px;height:16px;color:#130a1f}
+.dh .ttl{min-width:0;flex:1}.dh .ttl b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dh .ttl small{color:var(--muted);font-size:11.5px}
+.msgs{flex:1;overflow:auto;padding:16px 18px;display:flex;flex-direction:column;gap:14px}
+.m{max-width:100%;font-size:13.5px;line-height:1.55}
+.m.u{align-self:flex-end;background:rgba(142,162,255,.14);border:1px solid rgba(142,162,255,.25);padding:9px 12px;border-radius:12px 12px 3px 12px;max-width:85%}
+.m.a{color:#dfe3ec}
+.m.a p{margin:0 0 9px}.m.a p:last-child{margin-bottom:0}
+.m.a ul,.m.a ol{margin:4px 0 9px;padding-left:20px}.m.a li{margin:3px 0}
+.m.a h3,.m.a h4{margin:12px 0 6px;font-size:13.5px;color:#fff}
+.m.a code{font:12px var(--mono);background:#1a1f2b;padding:1px 5px;border-radius:5px;color:#ffcfae}
+.m.a pre{background:#0a0c11;border:1px solid var(--line);border-radius:9px;padding:10px;overflow:auto}
+.m.a pre code{background:none;padding:0;color:#cdd3df}
+.m.a strong{color:#fff}
+.m.err{color:#ffb3ba;background:rgba(255,93,108,.07);border:1px solid rgba(255,93,108,.3);padding:9px 12px;border-radius:10px}
+.m .meta{font-size:11px;color:var(--dim);margin-top:6px}
+.typing{display:inline-flex;gap:4px;padding:4px 0}
+.typing i{width:6px;height:6px;border-radius:50%;background:#b98cff;animation:bob 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes bob{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
+.sugg{display:flex;flex-wrap:wrap;gap:6px;padding:0 18px 10px}
+.sugg button{border:1px solid var(--line2);background:var(--panel);color:var(--muted);border-radius:999px;padding:5px 10px;font:12px var(--sans);cursor:pointer}
+.sugg button:hover{color:#fff;border-color:#b98cff}
+.composer{display:flex;gap:8px;padding:12px 18px 16px;border-top:1px solid var(--line)}
+.composer textarea{flex:1;resize:none;background:var(--panel);border:1px solid var(--line2);color:var(--text);border-radius:11px;padding:9px 12px;font:13.5px/1.4 var(--sans);min-height:42px;max-height:140px}
+.composer textarea:focus{outline:none;border-color:#b98cff}
+.composer .btn{align-self:flex-end;height:42px;padding:0 16px;font-weight:600}
+
+/* ---------- testing view ---------- */
+.thero{grid-template-columns:repeat(5,minmax(0,1fr))}
+.intro{margin:22px 0 0;padding:16px 18px;border:1px solid var(--line);border-radius:var(--r);background:linear-gradient(180deg,var(--panel2),var(--panel));
+  display:flex;gap:14px;align-items:flex-start;font-size:13.5px;color:var(--muted);line-height:1.55}
+.intro b{color:var(--text)}
+.suite{display:grid;grid-template-columns:26px minmax(0,1.6fr) minmax(0,1.2fr) 150px 70px 30px;gap:14px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line);cursor:pointer}
+.suite:hover{background:rgba(255,255,255,.018)}
+.suite .n{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.suite .w{font-size:12px;color:var(--muted);margin-top:2px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.suite .cnt{font-size:12.5px;color:var(--muted)}.suite .cnt b{color:var(--text);font-family:var(--mono)}
+.suite .cnt .bad{color:var(--fail)}
+.suite .pr{font:700 14px var(--mono);text-align:right}
+.suite .md{font-size:11px;color:var(--dim);text-align:right}
+.flag{font:700 10px var(--sans);letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:5px;color:#ffd08a;background:rgba(255,181,71,.12)}
+.sdetail{padding:6px 18px 16px 58px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.012);font-size:12.5px}
+.sdetail ul{margin:6px 0 10px;padding-left:18px;color:#ffb3ba;font-family:var(--mono);font-size:11.5px}
+.sdetail .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.sdetail a.btn{text-decoration:none}
+
+@media (max-width:1100px){.grid{grid-template-columns:1fr}.hero{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .suite{grid-template-columns:26px minmax(0,1fr) 120px 60px 30px}.suite .beadcol{display:none}}
+@media (max-width:640px){.suite{grid-template-columns:22px minmax(0,1fr) 54px 30px}.suite .cntcol{display:none}.sdetail{padding-left:18px}
+  .bar{gap:10px}.tabs a{padding:6px 10px}
+  .hero{grid-template-columns:repeat(2,minmax(0,1fr))}.stat .v{font-size:26px}.ring{display:none}
+  .detail{padding-left:18px}.wrow{grid-template-columns:110px 1fr 56px}.flight{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="bar">
+      <div class="brand">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#1a0b05" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></div>
+        <div><h1>FORGE</h1><small id="sub">CI</small></div>
+      </div>
+      <nav class="tabs" aria-label="Views"><a href="#/" data-view="overview" class="on">Overview</a><a href="#/testing" data-view="testing">Testing</a></nav>
+      <div class="spacer"></div>
+      <button class="btn ask" id="ask" title="Ask a question about anything on this dashboard"><span class="spark"></span>Ask Forge</button>
+      <span class="pill" id="sync">syncing…</span>
+      <span class="pill" id="rate" title="GitHub API budget">API —</span>
+      <span class="pill" id="live"><span class="dot"></span><span>connecting</span></span>
+    </div>
+  </header>
+
+  <div id="errors"></div>
+
+  <main id="v-overview">
+  <section class="hero">
+    <div class="stat" id="st-run"><div class="k">Running</div><div class="v warn mono">–</div><div class="s">jobs in flight</div></div>
+    <div class="stat" id="st-queue"><div class="k">Queued</div><div class="v mono">–</div><div class="s">median wait –</div></div>
+    <div class="stat" id="st-pass"><div class="k">Pass rate · 7d</div><div class="v mono">–</div><div class="s">–</div><svg class="ring" viewBox="0 0 36 36"></svg></div>
+    <div class="stat" id="st-dur"><div class="k">Median run · 7d</div><div class="v mono">–</div><div class="s">p90 –</div></div>
+    <div class="stat" id="st-fail"><div class="k">Failures · 24h</div><div class="v mono">–</div><div class="s">–</div></div>
+    <div class="stat" id="st-save" title="What the jobs that ran on self-hosted runners would have cost on GitHub-hosted runners"><div class="k">Saved · 7d</div><div class="v pass mono">–</div><div class="s">–</div></div>
+  </section>
+
+  <section class="fleet" id="fleet"></section>
+
+  <div class="grid">
+    <div class="stack">
+      <div class="panel">
+        <h2>In flight <span class="count" id="fl-count"></span></h2>
+        <div id="flight"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Runs <span class="count" id="runs-count"></span>
+          <span class="right muted" id="runs-hint">click a run for its job waterfall</span></h2>
+        <div class="filters">
+          <div class="seg" id="f-status">
+            <button data-v="all" class="on">All</button><button data-v="failed">Failed</button>
+            <button data-v="running">Running</button><button data-v="passed">Passed</button>
+          </div>
+          <div class="seg" id="f-where">
+            <button data-v="all" class="on">Anywhere</button><button data-v="sh">Self-hosted</button><button data-v="gh">GitHub-hosted</button>
+          </div>
+          <select id="f-repo"><option value="">All repos</option></select>
+          <input type="search" id="f-q" placeholder="Filter workflow, branch, commit, actor…">
+        </div>
+        <div class="runs" id="runs"></div>
+        <div class="more" id="more"></div>
+      </div>
+    </div>
+
+    <aside class="stack">
+      <div class="panel">
+        <h2>Last 14 days</h2>
+        <div class="chart"><div class="bars" id="bars"></div><div class="axis"><span id="ax0"></span><span>today</span></div></div>
+      </div>
+      <div class="panel">
+        <h2>Workflow health <span class="right muted">worst first</span></h2>
+        <div class="wfl" id="wfl"></div>
+      </div>
+      <div class="panel">
+        <h2>Activity</h2>
+        <div class="feed" id="feed"></div>
+      </div>
+      <div class="panel">
+        <h2>Alerts <span class="right"><button class="btn" id="test">Send test email</button></span></h2>
+        <dl class="kv" id="cfg"></dl>
+      </div>
+    </aside>
+  </div>
+  </main>
+
+  <main id="v-testing" hidden>
+    <div class="intro"><button class="ai" data-ai-kind="overview" data-ai-id="testing" data-ai-title="Testing overview" aria-label="Ask AI about testing"></button>
+      <div><b>Every automated test and check, in one place.</b> Each row is a test suite that runs whenever someone changes the code —
+      green means it passed, red means it caught a problem. Press <b>✦</b> on any row and Forge's assistant explains, in plain words,
+      what that test does, why it exists and what its latest result means.</div></div>
+    <section class="hero thero">
+      <div class="stat" id="t-suites"><div class="k">Test suites</div><div class="v mono">–</div><div class="s">–</div></div>
+      <div class="stat" id="t-pass"><div class="k">Pass rate · 7d</div><div class="v mono">–</div><div class="s">–</div></div>
+      <div class="stat" id="t-count"><div class="k">Tests in latest runs</div><div class="v mono">–</div><div class="s">summed over each suite's latest run</div></div>
+      <div class="stat" id="t-flaky"><div class="k">Flaky</div><div class="v mono">–</div><div class="s">pass sometimes, fail sometimes</div></div>
+      <div class="stat" id="t-sh"><div class="k">Self-hosted test minutes · 7d</div><div class="v pass mono">–</div><div class="s">–</div></div>
+    </section>
+    <div class="panel">
+      <h2>Test suites <span class="count" id="ts-count"></span><span class="right muted">failing and flaky first</span></h2>
+      <div class="filters">
+        <div class="seg" id="tf-status">
+          <button data-v="all" class="on">All</button><button data-v="failing">Failing</button><button data-v="flaky">Flaky</button><button data-v="passing">Passing</button>
+        </div>
+        <div class="seg" id="tf-where">
+          <button data-v="all" class="on">Anywhere</button><button data-v="self-hosted">Self-hosted</button><button data-v="github">On GitHub</button>
+        </div>
+        <select id="tf-repo"><option value="">All repos</option></select>
+        <input type="search" id="tf-q" placeholder="Filter by test, workflow or repo…">
+      </div>
+      <div id="suites"></div>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="d-title" aria-hidden="true">
+  <div class="dh"><div class="orb"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9z"/></svg></div>
+    <div class="ttl"><b id="d-title">Forge assistant</b><small id="d-sub">Ask anything about your CI</small></div>
+    <button class="btn" id="d-close" aria-label="Close">Close</button></div>
+  <div class="msgs" id="msgs" aria-live="polite"></div>
+  <div class="sugg" id="sugg"></div>
+  <form class="composer" id="composer"><textarea id="q" rows="1" placeholder="Ask a follow-up…" aria-label="Your question"></textarea><button class="btn ask" type="submit">Send</button></form>
+</aside>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ts = s => s ? Date.parse(s) : null;
+let S = null, skew = 0, open = new Set(), details = {}, limit = 30;
+const F = {status:"all", where:"all", repo:"", q:""};
+
+const ICON = {
+  success:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 8.5 3 3 6-7"/></svg>',
+  failure:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m4.5 4.5 7 7m0-7-7 7"/></svg>',
+  running:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 2.5a5.5 5.5 0 1 1-5.5 5.5"/></svg>',
+  queued:'<svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="3"/></svg>',
+  cancelled:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 8h8"/></svg>',
+};
+function kind(status, conclusion){
+  if (status && status !== "completed") return status === "in_progress" ? "running" : "queued";
+  if (["failure","timed_out","startup_failure"].includes(conclusion)) return "failure";
+  if (conclusion === "success") return "success";
+  return "cancelled";
+}
+const now = () => Date.now() + skew;
+const SPARK = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9z"/></svg>';
+function aiBtn(kind, id, title, sm){
+  return `<button class="ai ${sm ? "sm" : ""}" data-ai-kind="${esc(kind)}" data-ai-id="${esc(id)}" data-ai-title="${esc(title)}"
+    aria-label="Ask AI: what is ${esc(title)}?" title="Ask AI what this is">${SPARK}</button>`;
+}
+const SH = () => (S && S.config.host_label) || "self-hosted";   // display name for self-hosted runners
+const fmtN = n => n == null ? "–" : Number(n).toLocaleString();
+function dur(sec){
+  if (sec == null || isNaN(sec)) return "–";
+  sec = Math.max(0, Math.round(sec));
+  if (sec < 60) return sec + "s";
+  if (sec < 3600) return Math.floor(sec/60) + "m " + String(sec%60).padStart(2,"0") + "s";
+  return Math.floor(sec/3600) + "h " + String(Math.floor(sec%3600/60)).padStart(2,"0") + "m";
+}
+function ago(s){
+  const d = (now() - ts(s)) / 1000;
+  if (d < 45) return "just now";
+  if (d < 3600) return Math.round(d/60) + "m ago";
+  if (d < 86400) return Math.round(d/3600) + "h ago";
+  return Math.round(d/86400) + "d ago";
+}
+const short = r => r.split("/").pop();
+function runDur(r){
+  const a = ts(r.started_at || r.created_at);
+  const b = r.status === "completed" ? ts(r.updated_at) : now();
+  return (b - a) / 1000;
+}
+function where(r){
+  const n = r.jobs.length; if (!n) return "";
+  if (r.self_hosted === n) return `<span class="where sh">${esc(SH())}</span>`;
+  if (r.self_hosted === 0) return '<span class="where gh">github</span>';
+  return `<span class="where mix">mixed ${r.self_hosted}/${n}</span>`;
+}
+
+/* ---------------- render ---------------- */
+function render(){
+  if (!S) return;
+  const c = S.config;
+  $("#sub").textContent = `${c.title || "CI"} · ${c.repos.length} repos · ${S.runners.length} runners`;
+  renderErrors(); renderHero(); renderFleet(); renderFlight(); renderSide(); renderTesting();
+  // Host metrics push every 15s; don't rebuild the run list (and lose hover/clicks) unless it changed.
+  const sig = JSON.stringify(S.runs);
+  if (sig !== render.sig){ render.sig = sig; renderRuns(); }
+  tick();
+  const running = S.active.filter(a => a.status === "in_progress").length;
+  const lastDone = S.runs.find(r => r.status === "completed" && !["cancelled","skipped"].includes(r.conclusion));
+  const bad = lastDone && kind(lastDone.status, lastDone.conclusion) === "failure";
+  document.title = (running ? `● ${running} running · ` : bad ? "✖ " : "") + "Forge";
+  favicon(running ? "#ffb547" : bad ? "#ff5d6c" : "#3ddc97");
+}
+function favicon(color){
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#0c0f15"/><path d="M17 5 8 18h7l-1 9 9-13h-7z" fill="${color}"/></svg>`;
+  $("#favicon").href = "data:image/svg+xml," + encodeURIComponent(svg);
+}
+function renderErrors(){
+  const e = S.errors || [];
+  $("#errors").innerHTML = e.length ? `<div class="err">${e.map(x => `<div><b>${esc(x.source)}</b> — ${esc(x.msg)}</div>`).join("")}</div>` : "";
+}
+function renderHero(){
+  const st = S.stats, running = S.active.filter(a => a.status === "in_progress").length;
+  const queued = S.active.filter(a => a.status !== "in_progress").length + S.queued_runs;
+  $("#st-run .v").textContent = running; $("#st-run").classList.toggle("hot", running > 0);
+  $("#st-queue .v").textContent = queued;
+  $("#st-queue .s").textContent = "median wait " + dur(st.wait_median);
+  const pr = st.pass_rate;
+  const pv = $("#st-pass .v"); pv.textContent = pr == null ? "–" : pr + "%";
+  pv.className = "v mono " + (pr == null ? "" : pr >= 90 ? "pass" : pr >= 70 ? "warn" : "fail");
+  $("#st-pass .s").textContent = `${st.passed} passed · ${st.failed} failed`;
+  const col = pr == null ? "var(--line2)" : pr >= 90 ? "var(--pass)" : pr >= 70 ? "var(--run)" : "var(--fail)";
+  $("#st-pass .ring").innerHTML = `<circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--line2)" stroke-width="3"/>
+    <circle cx="18" cy="18" r="15.5" fill="none" stroke="${col}" stroke-width="3" stroke-linecap="round"
+    stroke-dasharray="${(pr||0)*0.974} 97.4" transform="rotate(-90 18 18)"/>`;
+  $("#st-dur .v").textContent = dur(st.median);
+  $("#st-dur .s").textContent = "p90 " + dur(st.p90);
+  const fv = $("#st-fail .v"); fv.textContent = st.failed_24h; fv.className = "v mono " + (st.failed_24h ? "fail" : "pass");
+  const share = st.jobs ? Math.round(100 * st.self_hosted_jobs / st.jobs) : 0;
+  $("#st-save .v").textContent = "$" + (st.saved_7d ?? 0).toFixed(2);
+  $("#st-save .s").textContent = `${fmtN(st.self_hosted_min)} self-hosted min · GitHub billed $${(st.hosted_cost_7d ?? 0).toFixed(2)}`;
+  $("#st-fail .s").textContent = `${share}% of jobs on self-hosted (7d)`;
+}
+function sparkline(vals, color){
+  if (!vals || vals.length < 2) return "";
+  const w = 200, h = 34, max = 100;
+  const pts = vals.map((v,i) => [i*(w/(vals.length-1)), h - (Math.min(v,max)/max)*(h-3) - 1.5]);
+  const d = pts.map((p,i) => (i?"L":"M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+  const id = "g" + color.replace(/\W/g,"");
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <defs><linearGradient id="${id}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".35"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+    <path d="${d} L${w} ${h} L0 ${h}Z" fill="url(#${id})"/><path d="${d}" fill="none" stroke="${color}" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>`;
+}
+function renderFleet(){
+  const h = S.host || {};
+  const gb = b => b ? (b/1073741824).toFixed(b > 20*1073741824 ? 0 : 1) + "G" : "";
+  const meter = (l, v, extra="") => `<div class="meter"><span class="l">${l}</span><span class="t"><span class="f" style="width:${Math.min(100,v||0)}%;background-position:${-(Math.min(100,v||0))*2}px 0"></span></span><span class="n">${v==null?"–":Math.round(v)+"%"}</span></div>`;
+  let html = h.configured === false ? "" : `<div class="runner host ${h.ok ? "" : "offline"}">
+    <div class="top"><div><div class="nm">${esc(h.label || S.config.host_label)}</div><div class="sc">host · ${h.cores ? h.cores + " cores · " + gb(h.mem_total) + " RAM · " + gb(h.disk_total) + " disk" : "no metrics"}</div></div>
+    <span class="state ${h.ok ? "idle" : "offline"}">${h.ok ? "load " + (h.load ?? 0).toFixed(2) : "no data"}</span></div>
+    <div class="meters">${meter("CPU", h.cpu)}${meter("MEM", h.mem)}${meter("DISK", h.disk)}</div>
+    ${sparkline(h.cpu_series, "#ffb547")}</div>`;
+  const busy = S.stats.busy_24h || {};
+  for (const r of S.runners){
+    const st = r.status === "offline" ? "offline" : r.busy ? "busy" : "idle";
+    const util = Math.round(100 * (busy[r.name] || 0) / 86400);
+    html += `<div class="runner ${st}">
+      <div class="top"><div><div class="nm">${esc(r.name)}</div><div class="sc">${esc(r.scope)} · ${util}% busy 24h</div></div>
+      <span class="state ${st}">${st}</span>${aiBtn("runner", r.name, "runner " + r.name, true)}</div>
+      <div class="job">${r.current ? `<a href="${esc(r.current.url)}" target="_blank"><b>${esc(r.current.name)}</b> · ${esc(short(r.current.repo))} · <span class="mono" data-since="${esc(r.current.started_at)}"></span></a>`
+        : st === "offline" ? `offline ${r.offline_since ? "for <span class=mono data-since-epoch=" + r.offline_since + "></span>" : ""}` : "waiting for work"}</div>
+      <div class="chips">${r.labels.filter(l => !["self-hosted","Linux","X64"].includes(l)).map(l => `<span class="chip ${l===S.config.host_label?"hl":""}">${esc(l)}</span>`).join("")}</div></div>`;
+  }
+  if (!S.runners.length) html += `<div class="runner"><div class="nm">No self-hosted runners</div><div class="job" style="white-space:normal">Jobs run on GitHub-hosted runners. To list your own runners, the token needs admin access to the repo or org (see docs/configuration.md).</div></div>`;
+  $("#fleet").innerHTML = html;
+}
+function renderFlight(){
+  const a = S.active;
+  $("#fl-count").textContent = a.length || "";
+  if (!a.length){
+    $("#flight").innerHTML = `<div class="empty"><div class="big">◌</div>Nothing running. The forge is cool.</div>`;
+    return;
+  }
+  $("#flight").innerHTML = `<div class="flight">` + a.map(j => {
+    const q = j.status !== "in_progress";
+    const steps = j.steps || [];
+    const cur = steps.find(s => s.status === "in_progress");
+    const done = steps.filter(s => s.status === "completed").length;
+    return `<div class="fcard ${q ? "queued" : ""}"><div class="fin">
+      <div class="row"><div style="min-width:0;flex:1"><div class="wf">${esc(short(j.repo))} · ${esc(j.wf)}</div>
+        <div class="jn"><a href="${esc(j.url)}" target="_blank">${esc(j.name)}</a></div></div>
+        <div class="timer" data-since="${esc(q ? j.created_at : j.started_at)}"></div>${aiBtn("job", j.id, j.name)}</div>
+      <div class="steps">${steps.length ? steps.map(s => `<i class="${s.status === "completed" ? (s.conclusion||"") : s.status}" title="${esc(s.name)}"></i>`).join("") : "<i></i>"}</div>
+      <div class="cur"><span>${q ? "waiting for a runner" + (j.labels.length ? " · " + esc(j.labels.join(", ")) : "") : esc(cur ? cur.name : "starting…")}</span>
+        <span class="dim" style="margin-left:auto">${q ? "" : done + "/" + steps.length}</span></div>
+      <div class="cur"><span class="br mono" style="color:#c9d1ff">${esc(j.branch)}</span><span class="dim">${esc(j.sha)}</span>
+        <span style="margin-left:auto" class="mono">${esc(j.runner || (q ? "" : "…"))}</span></div>
+    </div></div>`;
+  }).join("") + `</div>`;
+}
+function filtered(){
+  const q = F.q.toLowerCase();
+  return S.runs.filter(r => {
+    const k = kind(r.status, r.conclusion);
+    if (F.status === "failed" && k !== "failure") return false;
+    if (F.status === "running" && !(k === "running" || k === "queued")) return false;
+    if (F.status === "passed" && k !== "success") return false;
+    if (F.where === "sh" && !r.self_hosted) return false;
+    if (F.where === "gh" && r.self_hosted === r.jobs.length) return false;
+    if (F.repo && r.repo !== F.repo) return false;
+    if (q && !`${r.name} ${r.title} ${r.branch} ${r.actor} ${r.sha} ${r.repo}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+function renderRuns(){
+  const sel = $("#f-repo"), cur = sel.value;
+  const repos = [...new Set(S.config.repos)];
+  if (sel.options.length - 1 !== repos.length){
+    sel.innerHTML = `<option value="">All repos</option>` + repos.map(r => `<option>${esc(r)}</option>`).join("");
+    sel.value = cur;
+  }
+  const rows = filtered();
+  $("#runs-count").textContent = rows.length;
+  $("#runs").innerHTML = rows.slice(0, limit).map(r => {
+    const k = kind(r.status, r.conclusion), isOpen = open.has(r.id);
+    return `<div class="run ${isOpen ? "open" : ""}" data-id="${r.id}" id="run-${r.id}">
+      <div class="ico ${k}">${ICON[k]}</div>
+      <div style="min-width:0"><div class="ti">${esc(r.title)}</div>
+        <div class="meta"><span>${esc(r.name)}</span><span class="dim">${esc(short(r.repo))}</span><span class="br">${esc(r.branch)}</span>
+        <span>${r.avatar ? `<img class="av" src="${esc(r.avatar)}&s=32" alt="">` : ""}${esc(r.actor)}</span>${where(r)}${r.attempt > 1 ? `<span class="dim">attempt ${r.attempt}</span>` : ""}</div></div>
+      <div class="rt" style="display:flex;gap:12px;align-items:center"><div>
+      <div class="d" ${r.status !== "completed" ? `data-since="${esc(r.started_at || r.created_at)}"` : ""}>${dur(runDur(r))}</div><div>${ago(r.created_at)}</div></div>${aiBtn("run", r.id, r.name + " run")}</div>
+    </div>` + (isOpen ? detail(r) : "");
+  }).join("") || `<div class="empty">No runs match.</div>`;
+  $("#more").innerHTML = rows.length > limit ? `<button class="btn" id="more-btn">Show more (${rows.length - limit})</button>` : "";
+}
+function detail(r){
+  const jobs = (details[r.id] || r.jobs);
+  if (!jobs.length) return `<div class="detail"><div class="empty">No jobs yet.</div></div>`;
+  const t0 = Math.min(...jobs.map(j => ts(j.started_at) || ts(j.created_at) || Infinity));
+  const t1 = Math.max(...jobs.map(j => j.completed_at ? ts(j.completed_at) : now()));
+  const span = Math.max(1, t1 - t0);
+  return `<div class="detail"><div class="meta muted" style="font-size:12px;display:flex;gap:14px;flex-wrap:wrap">
+      <span>commit <span class="mono">${esc(r.sha)}</span></span><span>${esc(r.event)}</span>
+      <a href="${esc(r.url)}" target="_blank" style="color:#8ea2ff">open on GitHub ↗</a></div>
+    <div class="wfall">${jobs.map(j => {
+      const a = ts(j.started_at), b = j.completed_at ? ts(j.completed_at) : (a ? now() : null);
+      const cls = j.status === "completed" ? j.conclusion : j.status;
+      const bar = a ? `<b class="${cls}" style="left:${(a-t0)/span*100}%;width:${Math.max(.5,(b-a)/span*100)}%"></b>` : "";
+      const fs = (j.steps || []).find(s => ["failure","timed_out"].includes(s.conclusion));
+      return `<div class="wrow"><span class="jn">${aiBtn("job", j.id, j.name, true)} <a href="${esc(j.url)}" target="_blank">${esc(j.name)}</a>
+          <span class="dim mono" style="font-size:10.5px"> ${esc(j.runner || "")}</span></span>
+        <span class="track">${bar}</span><span class="jd">${a ? dur((b-a)/1000) : "queued"}</span>
+        ${fs ? `<div class="fstep">↳ failed at step “${esc(fs.name)}”</div>` : ""}</div>`;
+    }).join("")}</div></div>`;
+}
+function renderSide(){
+  const d = S.stats.daily, max = Math.max(1, ...d.map(x => x.pass + x.fail));
+  $("#bars").innerHTML = d.map(x => `<div class="c" data-t="${x.day.slice(5)} · ${x.pass}✓ ${x.fail}✗">
+      <i class="p" style="height:${x.pass/max*100}%"></i><i class="f" style="height:${x.fail/max*100}%"></i></div>`).join("");
+  $("#ax0").textContent = d[0] ? d[0].day.slice(5) : "";
+  const w = S.stats.workflows;
+  $("#wfl").innerHTML = w.length ? w.map(x => `<div class="wfi"><div style="min-width:0"><div class="n">${esc(x.name)}</div>
+      <div class="r">${esc(short(x.repo))} · ${x.runs} runs · median ${dur(x.median)}</div></div>
+      <div class="pr" style="color:${x.pass_rate>=90?"var(--pass)":x.pass_rate>=70?"var(--run)":"var(--fail)"}">${x.pass_rate}%</div>
+      <div class="beads">${x.last.map(c => `<i class="${c}" title="${c}"></i>`).join("")}</div></div>`).join("")
+    : `<div class="empty">No completed runs in the last 7 days.</div>`;
+  const col = {failed:"var(--fail)", recovered:"var(--pass)", "still-failing":"#ff9aa4", "runner-offline":"var(--fail)", "runner-online":"var(--pass)", test:"var(--queue)"};
+  $("#feed").innerHTML = S.feed.length ? S.feed.map(e => `<a class="ev" ${e.url ? `href="${esc(e.url)}" target="_blank"` : ""}>
+      <span class="b" style="background:${col[e.kind] || "var(--dim)"}"></span>
+      <div style="min-width:0"><div class="t">${esc(e.title)}</div><div class="d">${esc([e.repo && short(e.repo), e.detail].filter(Boolean).join(" · "))}</div></div>
+      <time>${ago(e.ts)}</time></a>`).join("") : `<div class="empty">Alerts and runner events show up here.</div>`;
+  const n = S.config.notify;
+  $("#cfg").innerHTML = `<dt>Email</dt><dd style="color:${n.enabled?"var(--pass)":"var(--fail)"}">${n.enabled ? "on · " + esc(n.via) : "not configured"}</dd>
+    <dt>To</dt><dd>${esc(n.to.join(", ") || "–")}</dd>
+    <dt>Fires on</dt><dd>${n.mode === "every" ? "every failure" : "pass→fail, recovery"}</dd>
+    <dt>Runner offline</dt><dd>after grace period</dd>
+    <dt>Poll</dt><dd>every ${S.config.poll}s</dd>`;
+}
+
+/* ---------------- views ---------------- */
+function route(){
+  const v = location.hash.startsWith("#/testing") ? "testing" : "overview";
+  $("#v-overview").hidden = v !== "overview"; $("#v-testing").hidden = v !== "testing";
+  document.querySelectorAll(".tabs a").forEach(a => { a.classList.toggle("on", a.dataset.view === v); a.setAttribute("aria-current", a.dataset.view === v ? "page" : "false"); });
+  if (S) renderTesting(true);
+}
+window.addEventListener("hashchange", route);
+
+/* ---------------- testing ---------------- */
+const TF = {status:"all", where:"all", repo:"", q:""}; const openSuites = new Set();
+function countsText(c){
+  if (!c) return `<span class="dim">pass / fail only</span>`;
+  if (c.kind === "eslint") return `<b>${fmtN(c.errors)}</b> errors · ${fmtN(c.warnings)} warnings`;
+  if (c.kind === "tsc") return c.errors ? `<b class="bad">${fmtN(c.errors)}</b> type errors` : `<b>0</b> type errors`;
+  const bits = [`<b>${fmtN(c.passed)}</b> passed`];
+  if (c.failed) bits.push(`<b class="bad">${fmtN(c.failed)}</b> failed`);
+  if (c.skipped) bits.push(`${fmtN(c.skipped)} skipped`);
+  return bits.join(" · ");
+}
+function renderTesting(force){
+  if ($("#v-testing").hidden) return;
+  const T = S.tests || {summary:{}, suites:[]}, m = T.summary;
+  $("#t-suites .v").textContent = fmtN(m.suites);
+  $("#t-suites .s").textContent = `${fmtN(m.execs_7d)} runs in the last 7 days`;
+  const pv = $("#t-pass .v"); pv.textContent = m.pass_rate_7d == null ? "–" : m.pass_rate_7d + "%";
+  pv.className = "v mono " + (m.pass_rate_7d == null ? "" : m.pass_rate_7d >= 90 ? "pass" : m.pass_rate_7d >= 70 ? "warn" : "fail");
+  $("#t-pass .s").textContent = `${fmtN(m.passed_7d)} of ${fmtN(m.execs_7d)} test runs passed`;
+  $("#t-count .v").textContent = fmtN(m.tests_latest);
+  const fv = $("#t-flaky .v"); fv.textContent = fmtN(m.flaky); fv.className = "v mono " + (m.flaky ? "warn" : "pass");
+  $("#t-sh .v").textContent = fmtN(m.self_hosted_min_7d);
+  $("#t-sh .s").textContent = `saved $${(m.saved_7d ?? 0).toFixed(2)} · ${fmtN(m.hosted_min_7d)} min still on GitHub`;
+
+  const sel = $("#tf-repo"), repos = [...new Set(T.suites.map(x => x.repo))];
+  if (sel.options.length - 1 !== repos.length){ const cur = sel.value; sel.innerHTML = `<option value="">All repos</option>` + repos.map(r => `<option>${esc(r)}</option>`).join(""); sel.value = cur; }
+  const q = TF.q.toLowerCase();
+  const rows = T.suites.filter(x => {
+    const failing = x.last.conclusion === "failure" || x.last.conclusion === "timed_out";
+    if (TF.status === "failing" && !failing) return false;
+    if (TF.status === "flaky" && !x.flaky) return false;
+    if (TF.status === "passing" && (failing || x.flaky)) return false;
+    if (TF.where === "self-hosted" && x.where === "github") return false;
+    if (TF.where === "github" && x.where === "self-hosted") return false;
+    if (TF.repo && x.repo !== TF.repo) return false;
+    if (q && !`${x.name} ${x.workflow} ${x.repo}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const sig = JSON.stringify([rows, [...openSuites]]);
+  if (!force && sig === renderTesting.sig) return; renderTesting.sig = sig;
+  $("#ts-count").textContent = rows.length;
+  $("#suites").innerHTML = rows.map(x => {
+    const k = kind(x.last.status, x.last.conclusion), isOpen = openSuites.has(x.key);
+    const whereChip = x.where === "self-hosted" ? `<span class="where sh">${esc(SH())}</span>` : x.where === "github" ? '<span class="where gh">github</span>' : '<span class="where mix">mixed</span>';
+    const prc = x.pass_rate == null ? "var(--dim)" : x.pass_rate >= 90 ? "var(--pass)" : x.pass_rate >= 70 ? "var(--run)" : "var(--fail)";
+    let det = "";
+    if (isOpen){
+      const lf = x.last_failure;
+      det = `<div class="sdetail">
+        <div>Latest: <b>${esc(x.last.conclusion || x.last.status)}</b> on <span class="mono">${esc(x.last.branch)}</span> @ <span class="mono">${esc(x.last.sha)}</span>
+          · ran on <span class="mono">${esc(x.last.runner || "–")}</span> · ${ago(x.last.created_at)}</div>
+        ${lf ? `<div style="margin-top:8px">Last failure ${ago(lf.created_at)} on <span class="mono">${esc(lf.branch)}</span>${lf.failures.length ? ":" : " (no test names in the log summary)"}</div>
+          ${lf.failures.length ? `<ul>${lf.failures.slice(0,10).map(f => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}` : `<div style="margin-top:8px" class="muted">No failures in the last 14 days.</div>`}
+        <div class="acts">
+          <a class="btn" href="${esc(x.last.url)}" target="_blank">Latest run on GitHub ↗</a>
+          ${lf ? `<button class="btn ask" data-ai-kind="job" data-ai-id="${lf.id}" data-ai-title="${esc(x.name)} — last failure">${SPARK} Explain the last failure</button>` : ""}
+        </div></div>`;
+    }
+    return `<div class="suite" data-key="${esc(x.key)}">
+      <div class="ico ${k}">${ICON[k]}</div>
+      <div style="min-width:0"><div class="n">${esc(x.name)} ${x.flaky ? '<span class="flag">flaky</span>' : ""}</div>
+        <div class="w"><span>${esc(x.workflow)}</span><span class="dim">${esc(short(x.repo))}</span>${whereChip}</div></div>
+      <div class="cntcol" style="min-width:0"><div class="cnt">${countsText(x.counts)}</div>
+        <div class="beads beadcol" style="margin-top:6px">${x.results.map(c => `<i class="${c}" title="${c}"></i>`).join("")}</div></div>
+      <div class="cntcol md">median ${dur(x.median)}<br>${x.runs} runs</div>
+      <div class="pr" style="color:${prc}">${x.pass_rate == null ? "–" : x.pass_rate + "%"}</div>
+      ${aiBtn("suite", x.key, x.name + " (" + x.workflow + ")")}
+    </div>${det}`;
+  }).join("") || `<div class="empty">No test suites match.</div>`;
+}
+$("#suites").addEventListener("click", e => {
+  if (e.target.closest("a,.ai,.btn")) return;
+  const row = e.target.closest(".suite"); if (!row) return;
+  const k = row.dataset.key; openSuites.has(k) ? openSuites.delete(k) : openSuites.add(k); renderTesting(true);
+});
+for (const [sel, key] of [["#tf-status","status"],["#tf-where","where"]]){
+  $(sel).addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    $(sel).querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); TF[key] = b.dataset.v; renderTesting(true);
+  });
+}
+$("#tf-repo").addEventListener("change", e => { TF.repo = e.target.value; renderTesting(true); });
+$("#tf-q").addEventListener("input", e => { TF.q = e.target.value; renderTesting(true); });
+
+/* ---------------- AI chat ---------------- */
+function md(src){
+  // Tiny, safe markdown: escape first, then format.
+  const blocks = String(src).split(/```/);
+  return blocks.map((b, i) => {
+    if (i % 2) return `<pre><code>${esc(b.replace(/^[a-z]*\n/, ""))}</code></pre>`;
+    const inline = t => esc(t).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/(^|\W)\*([^*\n]+)\*(?=\W|$)/g, "$1<em>$2</em>");
+    const out = []; let list = null;
+    for (const line of b.split("\n")){
+      const li = line.match(/^\s*(?:[-*•]|\d+[.)])\s+(.*)/);
+      if (li){ const t = /^\s*\d/.test(line) ? "ol" : "ul"; if (!list){ list = t; out.push(`<${t}>`); } out.push(`<li>${inline(li[1])}</li>`); continue; }
+      if (list){ out.push(`</${list}>`); list = null; }
+      const h = line.match(/^#{1,4}\s+(.*)/);
+      if (h){ out.push(`<h4>${inline(h[1])}</h4>`); continue; }
+      if (line.trim()) out.push(`<p>${inline(line)}</p>`);
+    }
+    if (list) out.push(`</${list}>`);
+    return out.join("");
+  }).join("");
+}
+const chat = {ctx: null, msgs: [], busy: false};
+const SUGG = {
+  job: ["Why did it fail?", "Is it safe to ignore?", "How long does it usually take?", "Why does it run on this machine?"],
+  run: ["Which part took longest?", "What would stop this from shipping?", "Why did this run start?"],
+  suite: ["What would break without this test?", "Why is it flaky?", "Who should look at a failure?"],
+  runner: ["What is this machine doing?", "Is it overloaded?", "What happens if it goes offline?"],
+  overview: ["How healthy is our CI this week?", "How much are self-hosted runners saving us?", "What's failing most often?"],
+};
+function openChat(ctx){
+  const same = chat.ctx && chat.ctx.kind === ctx.kind && chat.ctx.id === ctx.id;
+  if (!same){ chat.ctx = ctx; chat.msgs = []; }
+  $("#d-title").textContent = ctx.title || "Forge assistant";
+  $("#d-sub").textContent = ctx.kind === "overview" ? "Ask anything about your CI" : "Plain-English explainer · ask follow-ups below";
+  $("#drawer").classList.add("on"); $("#scrim").classList.add("on"); $("#drawer").setAttribute("aria-hidden", "false");
+  renderChat();
+  if (!chat.msgs.length){
+    if (ctx.id === "testing") send("Give me a plain-language summary of how our tests are doing right now, and anything that needs attention.", false);
+    else if (ctx.kind === "overview") $("#q").focus();
+    else send("Explain this to me in plain language.", true);
+  } else $("#q").focus();
+}
+function closeChat(){ $("#drawer").classList.remove("on"); $("#scrim").classList.remove("on"); $("#drawer").setAttribute("aria-hidden", "true"); }
+function renderChat(){
+  const el = $("#msgs");
+  const intro = chat.ctx && chat.ctx.kind === "overview" && !chat.msgs.length
+    ? `<div class="m a"><p>Hi — I can explain anything on this dashboard: what a test does, why a build failed, or how much self-hosted runners are saving. What would you like to know?</p></div>` : "";
+  el.innerHTML = intro + chat.msgs.map((m, i) => {
+    if (m.hidden) return "";
+    if (m.role === "user") return `<div class="m u">${esc(m.content)}</div>`;
+    if (m.error) return `<div class="m err">${esc(m.error)}</div>`;
+    const typing = !m.content && chat.busy && i === chat.msgs.length - 1;
+    return `<div class="m a">${typing ? '<span class="typing"><i></i><i></i><i></i></span>' : md(m.content)}
+      ${m.meta ? `<div class="meta">${esc(m.meta)}</div>` : ""}</div>`;
+  }).join("");
+  el.scrollTop = el.scrollHeight;
+  const kindKey = chat.ctx ? (chat.ctx.id === "testing" ? "suite" : chat.ctx.kind) : "overview";
+  $("#sugg").innerHTML = chat.busy ? "" : (SUGG[kindKey] || []).map(t => `<button type="button">${esc(t)}</button>`).join("");
+  $("#composer button").disabled = chat.busy;
+}
+async function send(text, explain){
+  if (chat.busy || !text.trim()) return;
+  chat.msgs.push({role: "user", content: text, hidden: explain});
+  const reply = {role: "assistant", content: ""}; chat.msgs.push(reply);
+  chat.busy = true; renderChat();
+  // Everything but the empty reply we just added; failed turns are dropped.
+  const history = chat.msgs.slice(0, -1).filter(m => !m.error && m.content).map(m => ({role: m.role, content: m.content}));
+  const t0 = Date.now();
+  try {
+    const res = await fetch("api/ai/chat", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({context: {kind: chat.ctx.kind, id: chat.ctx.id}, messages: history, explain: !!explain})});
+    if (!res.ok || !res.body) throw new Error("Forge couldn't reach the assistant (" + res.status + ")");
+    const rd = res.body.getReader(), dec = new TextDecoder(); let buf = "";
+    for (;;){
+      const {value, done} = await rd.read(); if (done) break;
+      buf += dec.decode(value, {stream: true});
+      let i;
+      while ((i = buf.indexOf("\n\n")) >= 0){
+        const chunk = buf.slice(0, i); buf = buf.slice(i + 2);
+        const ev = (chunk.match(/^event: (.*)$/m) || [])[1], data = JSON.parse((chunk.match(/^data: (.*)$/m) || [,"{}"])[1]);
+        if (ev === "delta"){ reply.content += data.t; renderChat(); }
+        else if (ev === "error"){ reply.error = data.error; }
+        else if (ev === "done"){ reply.meta = data.cached ? "saved answer · instant" : `answered in ${((Date.now()-t0)/1000).toFixed(1)}s`; }
+      }
+    }
+  } catch (err){ reply.error = err.message || String(err); }
+  if (!reply.content && !reply.error) reply.error = "No answer came back — try again.";
+  chat.busy = false; renderChat();
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-ai-kind]"); if (!b) return;
+  e.preventDefault(); e.stopPropagation();
+  openChat({kind: b.dataset.aiKind, id: b.dataset.aiId, title: b.dataset.aiTitle});
+}, true);
+$("#ask").addEventListener("click", () => openChat({kind: "overview", id: "overview", title: "Ask Forge"}));
+$("#d-close").addEventListener("click", closeChat); $("#scrim").addEventListener("click", closeChat);
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#drawer").classList.contains("on")) closeChat(); });
+$("#composer").addEventListener("submit", e => { e.preventDefault(); const q = $("#q"); const t = q.value; q.value = ""; send(t); });
+$("#q").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); $("#composer").requestSubmit(); } });
+$("#sugg").addEventListener("click", e => { const b = e.target.closest("button"); if (b) send(b.textContent); });
+document.querySelectorAll(".ai:empty").forEach(b => b.innerHTML = SPARK);
+$("#ask .spark").outerHTML = SPARK;
+route();
+
+/* timers tick locally so durations move between server pushes */
+function tick(){
+  document.querySelectorAll("[data-since]").forEach(el => { const t = ts(el.dataset.since); el.textContent = t ? dur((now()-t)/1000) : ""; });
+  document.querySelectorAll("[data-since-epoch]").forEach(el => el.textContent = dur(now()/1000 - +el.dataset.sinceEpoch));
+  if (S){
+    $("#sync").textContent = S.last_poll ? "synced " + ago(S.last_poll) : "syncing…";
+    const r = S.rate || {};
+    $("#rate").textContent = r.limit ? `API ${r.remaining}/${r.limit}` : "API —";
+  }
+}
+setInterval(tick, 1000);
+
+/* ---------------- data ---------------- */
+function apply(data){
+  S = data; skew = Date.parse(S.now) - Date.now();
+  if (Math.abs(skew) < 3000) skew = 0;
+  render();
+  if (location.hash.startsWith("#run-") && !apply.jumped){
+    const id = +location.hash.slice(5); apply.jumped = true;
+    if (S.runs.some(r => r.id === id)){ open.add(id); loadDetail(id); renderRuns(); document.getElementById("run-"+id)?.scrollIntoView({block:"center"}); }
+  }
+}
+function setLive(on){
+  const el = $("#live"); el.className = "pill " + (on ? "live" : "offline");
+  el.lastElementChild.textContent = on ? "live" : "reconnecting";
+}
+function connect(){
+  const es = new EventSource("api/stream");
+  es.addEventListener("state", e => { setLive(true); apply(JSON.parse(e.data)); });
+  es.onopen = () => setLive(true);
+  es.onerror = () => { setLive(false); };
+}
+async function loadDetail(id){
+  try { const r = await fetch("api/runs/" + id); details[id] = (await r.json()).jobs; renderRuns(); tick(); } catch {}
+}
+fetch("api/state").then(r => r.json()).then(apply).catch(() => {});
+connect();
+
+/* ---------------- interactions ---------------- */
+$("#runs").addEventListener("click", e => {
+  if (e.target.closest("a,.ai")) return;
+  const row = e.target.closest(".run"); if (!row) return;
+  const id = +row.dataset.id;
+  if (open.has(id)) open.delete(id); else { open.add(id); loadDetail(id); }
+  history.replaceState(null, "", open.has(id) ? "#run-" + id : location.pathname);
+  renderRuns(); tick();
+});
+for (const [sel, key] of [["#f-status","status"],["#f-where","where"]]){
+  $(sel).addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    $(sel).querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+    F[key] = b.dataset.v; limit = 30; renderRuns(); tick();
+  });
+}
+$("#f-repo").addEventListener("change", e => { F.repo = e.target.value; renderRuns(); tick(); });
+$("#f-q").addEventListener("input", e => { F.q = e.target.value; renderRuns(); tick(); });
+$("#more").addEventListener("click", e => { if (e.target.id === "more-btn"){ limit += 40; renderRuns(); tick(); } });
+function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("on"), 3500); }
+$("#test").addEventListener("click", async () => {
+  const r = await fetch("api/notify/test", {method:"POST"}).then(r => r.json()).catch(() => ({ok:false,error:"request failed"}));
+  toast(r.ok ? "Test email sent ✓" : "Not sent: " + (r.error || "unknown error"));
+});
+</script>
+</body>
+</html>

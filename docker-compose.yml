@@ -1,0 +1,16 @@
+# docker compose up -d   — then open http://localhost:8080
+# Copy .env.example to .env and fill in GITHUB_TOKEN + FORGE_REPOS first.
+services:
+  forge:
+    image: ghcr.io/codephilip/forge-ci:latest
+    build: .
+    container_name: forge-ci
+    ports:
+      - "${FORGE_PORT:-8080}:8080"
+    env_file: .env
+    volumes:
+      - forge-data:/data
+    restart: unless-stopped
+
+volumes:
+  forge-data: {}
