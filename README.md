@@ -126,6 +126,12 @@ Edit `~/.forge-ci/forge.env` and re-run the installer (or `docker restart forge-
 - Follow-up chat keeps that context, with suggested questions and an **Ask Forge** button for questions about the whole dashboard.
 - First explanations are cached for each item and result, so everyone after the first person gets them instantly and free. A per-person rate limit caps spending.
 
+  ![The AI explainer: a failing test suite explained in plain English, with the root cause read out of the log](docs/screenshots/ai-explainer.png)
+
+  *A real failure in `vuejs/core`, explained by pressing ✦ — Forge read the log and found the cause (a major `@babel/types` upgrade renaming properties the compiler uses). Follow-up questions keep the same context:*
+
+  ![Follow-up chat: "Should I be worried about this one?"](docs/screenshots/ai-chat.png)
+
 **Alerts**
 - Email when a workflow goes from passing to **failing**, when it **recovers**, and when a self-hosted runner has been **offline** for 5 minutes. It only emails when something changes, so a job that keeps failing doesn't flood your inbox.
 - Works with [Resend](https://resend.com) or any SMTP server. There's a "Send test email" button.
