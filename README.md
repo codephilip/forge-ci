@@ -6,7 +6,7 @@
 
 One container · no build step · works with GitHub-hosted and self-hosted runners
 
-[Quick start](#quick-start) · [Features](#features) · [Install options](#install-options) · [Configuration](docs/configuration.md) · [How it works](docs/how-it-works.md)
+[Quick start](#quick-start) · [Credentials](#credentials-what-youll-be-asked-for-and-why) · [Features](#features) · [Install options](#install-options) · [Configuration](docs/configuration.md) · [How it works](docs/how-it-works.md)
 
 </div>
 
@@ -45,6 +45,63 @@ GITHUB_TOKEN=ghp_… FORGE_REPOS=owner/repo,owner/other \
 Flags: `--yes` (no prompts), `--reconfigure`, `--uninstall` (keeps data), `--purge` (removes data and config).
 Environment: `FORGE_PORT` (default 8080), `FORGE_IMAGE`, `FORGE_CONF_DIR`.
 </details>
+
+## Credentials: what you'll be asked for, and why
+
+Forge needs **one** credential to work: a GitHub token. Everything else is optional and switches on an extra feature. The installer asks for each in turn (press Enter to skip the optional ones) and saves them in `~/.forge-ci/forge.env`, readable only by your user. With Docker Compose they go in `.env`; on Kubernetes, in a Secret. They're only ever sent to the service they belong to.
+
+### 1. GitHub token (required)
+
+**Why:** Forge reads your workflow runs, jobs, logs and self-hosted runners through the GitHub API. Without a token it can't see private repos, can't read job logs (so no test counts), and runs into GitHub's anonymous rate limit of 60 requests an hour.
+
+**If you use the GitHub CLI (`gh`),** the installer picks up your existing login automatically and you won't be asked for a token.
+
+**Otherwise, create a classic token:**
+1. Open **[github.com/settings/tokens/new](https://github.com/settings/tokens/new?scopes=repo&description=Forge)** (this link pre-fills the `repo` scope and a name).
+2. Choose scopes:
+
+   | You want to… | Scopes to tick |
+   |---|---|
+   | watch public repos only | none (the token just identifies you and raises the rate limit to 5,000/hour) |
+   | watch private repos | **`repo`** |
+   | see an org's self-hosted runners, or auto-watch every private repo in an org | **`repo`** + **`admin:org`** |
+
+3. Set an expiry you'll remember. Forge stops updating when the token expires.
+4. Paste it when the installer asks. The installer checks it straight away and tells you which account it belongs to.
+
+Forge only ever **reads** from GitHub. `admin:org` is needed because GitHub doesn't offer a read-only scope for listing org runners, but Forge never uses it to change anything.
+
+> Fine-grained tokens also work, but only if everything you watch belongs to one owner. See [configuration.md](docs/configuration.md#token-scopes).
+
+### 2. Repos to watch (required)
+
+Not a secret, just a list: `owner/repo,owner/other-repo`. The installer suggests your three most recently pushed repos and checks it can read each one. To follow a whole organisation instead, give its name when asked ("Also watch every private repo in an org?").
+
+### 3. Anthropic API key (optional: turns on the ✦ AI explainer and chat)
+
+**Why:** the ✦ buttons send the selected job's details (steps, results, a log excerpt, the workflow file) to Anthropic's API and stream back a plain-English explanation. Without a key, everything else works and the ✦ buttons say "AI is not configured".
+
+**How:** create a key at **[console.anthropic.com → API keys](https://console.anthropic.com/settings/keys)**. The account needs API **credit** (Plans & Billing); a key on an account with no balance is accepted, but every answer comes back with a "credit balance is too low" error.
+
+**Cost control:** explanations are cached, so a job's first explanation is the only one that costs anything; everyone after that gets the saved answer. Questions are limited to 40 per person per 10 minutes (`FORGE_AI_RATE_PER_10MIN`).
+
+### 4. Email alerts (optional: failure, recovery and runner-offline emails)
+
+**Why:** so you hear about a broken build without keeping the dashboard open.
+
+**How:** give the address alerts should go to, then either:
+- a **[Resend](https://resend.com) API key** (free tier is plenty). Until you verify a domain in Resend, mail comes from `onboarding@resend.dev` and Resend only delivers it to your own account's address; after verifying, set `NOTIFY_FROM=Forge CI <ci@your-domain>`; **or**
+- your own mail server: add `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER` and `SMTP_PASS` to the settings file.
+
+Use the **Send test email** button in Forge (Alerts panel) to check it.
+
+### 5. Prometheus (optional: runner host CPU / memory / disk)
+
+Only useful if you run your own runner machine with [node-exporter](https://github.com/prometheus/node_exporter). Set `PROM_URL` and `PROM_INSTANCE` in the settings file; there's no secret involved. Details in [configuration.md](docs/configuration.md#runner-host-health-prometheus).
+
+### Changing settings later
+
+Edit `~/.forge-ci/forge.env` and re-run the installer (or `docker restart forge-ci`), or run the installer with `--reconfigure` to be asked everything again. The full list of settings is in **[docs/configuration.md](docs/configuration.md)**.
 
 ## Features
 
@@ -94,15 +151,7 @@ docker run -d --name forge-ci -p 8080:8080 \
   ghcr.io/codephilip/forge-ci:latest
 ```
 
-### What token do I need?
-
-| You want to… | Token |
-|---|---|
-| watch public repos | any token (it just raises GitHub's rate limit) |
-| watch private repos | classic PAT with **`repo`** |
-| see an org's self-hosted runners, or auto-watch every private repo in an org | add **`admin:org`** (Forge only reads) |
-
-[Create a classic token →](https://github.com/settings/tokens/new?scopes=repo&description=Forge) · Every setting is in **[docs/configuration.md](docs/configuration.md)**.
+Which credentials to use, and why: see **[Credentials](#credentials-what-youll-be-asked-for-and-why)**. Every setting: **[docs/configuration.md](docs/configuration.md)**.
 
 ## Security
 

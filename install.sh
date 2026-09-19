@@ -120,6 +120,7 @@ else
   ask ORGS "Also watch every private repo in an org? org name(s), or Enter to skip" "$ORGS"
 
   step "Optional extras (press Enter to skip any)"
+  say "${dim}What each one is for: https://github.com/codephilip/forge-ci#credentials-what-youll-be-asked-for-and-why${off}"
   AI="${ANTHROPIC_API_KEY:-}"
   [ -n "$AI" ] || ask AI "Anthropic API key for the AI explainer" "" secret
   NOTIFY_TO="${NOTIFY_TO:-}"
