@@ -74,12 +74,15 @@ header{position:sticky;top:0;z-index:20;backdrop-filter:blur(14px) saturate(140%
 .stack{display:flex;flex-direction:column;gap:14px}
 
 /* ---------- fleet ---------- */
-.fleet{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-bottom:14px}
+.fleet{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-bottom:14px;align-items:start}
 .runner{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;position:relative;overflow:hidden}
-.runner .top{display:flex;align-items:center;gap:10px}
+/* Name block shrinks (long scopes like repo:owner/name wrap); pill and ✦ never do,
+   so neither can be pushed past the card's edge and clipped. */
+.runner .top{display:flex;align-items:flex-start;gap:8px}
+.runner .top > div:first-child{flex:1;min-width:0}
 .runner .nm{font:600 14px var(--mono)}
-.runner .sc{font-size:11px;color:var(--dim);margin-top:2px}
-.state{margin-left:auto;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:6px}
+.runner .sc{font-size:11px;color:var(--dim);margin-top:2px;overflow-wrap:anywhere}
+.state{margin-left:auto;flex:none;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:6px}
 .state.idle{color:var(--pass);background:rgba(61,220,151,.1)}
 .state.busy{color:var(--run);background:rgba(255,181,71,.12)}
 .state.offline{color:var(--fail);background:rgba(255,93,108,.12)}
@@ -211,7 +214,8 @@ input[type=search]{flex:1;min-width:140px}
   border:1px solid rgba(170,120,255,.32);background:rgba(170,120,255,.08);color:#c9a8ff;padding:0;transition:.15s}
 .ai:hover{background:rgba(170,120,255,.2);border-color:#b98cff;color:#fff;transform:translateY(-1px)}
 .ai svg{width:14px;height:14px}
-.ai.sm{width:22px;height:22px;border-radius:7px}.ai.sm svg{width:12px;height:12px}
+.ai.sm{width:22px;height:22px;border-radius:7px}
+.runner .top .ai{margin-top:-1px}.ai.sm svg{width:12px;height:12px}
 .ai:focus-visible,.btn:focus-visible,.tabs a:focus-visible{outline:2px solid #b98cff;outline-offset:2px}
 
 /* ---------- chat drawer ---------- */
@@ -258,7 +262,10 @@ input[type=search]{flex:1;min-width:140px}
 .intro b{color:var(--text)}
 .suite{display:grid;grid-template-columns:26px minmax(0,1.6fr) minmax(0,1.2fr) 150px 70px 30px;gap:14px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line);cursor:pointer}
 .suite:hover{background:rgba(255,255,255,.018)}
-.suite .n{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Long suite name truncates; the FLAKY badge keeps its size and stays inside. */
+.suite .n{font-weight:600;display:flex;align-items:center;gap:6px;min-width:0}
+.suite .n span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.suite .n .flag{flex:none}
 .suite .w{font-size:12px;color:var(--muted);margin-top:2px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .suite .cnt{font-size:12.5px;color:var(--muted)}.suite .cnt b{color:var(--text);font-family:var(--mono)}
 .suite .cnt .bad{color:var(--fail)}
@@ -703,7 +710,7 @@ function renderTesting(force){
     }
     return `<div class="suite" data-key="${esc(x.key)}">
       <div class="ico ${k}">${ICON[k]}</div>
-      <div style="min-width:0"><div class="n">${esc(x.name)} ${x.flaky ? '<span class="flag">flaky</span>' : ""}</div>
+      <div style="min-width:0"><div class="n"><span>${esc(x.name)}</span>${x.flaky ? '<span class="flag">flaky</span>' : ""}</div>
         <div class="w"><span>${esc(x.workflow)}</span><span class="dim">${esc(short(x.repo))}</span>${whereChip}</div></div>
       <div class="cntcol" style="min-width:0"><div class="cnt">${countsText(x.counts)}</div>
         <div class="beads beadcol" style="margin-top:6px">${x.results.map(c => `<i class="${c}" title="${c}"></i>`).join("")}</div></div>
