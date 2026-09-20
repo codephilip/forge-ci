@@ -6,6 +6,10 @@
 
 One container · no build step · works with GitHub-hosted and self-hosted runners
 
+[![Release](https://img.shields.io/github/v/release/codephilip/forge-ci?color=2a78d6&label=release)](https://github.com/codephilip/forge-ci/releases)
+[![CI](https://github.com/codephilip/forge-ci/actions/workflows/ci.yml/badge.svg)](https://github.com/codephilip/forge-ci/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
+
 [What it is](#what-it-is) · [Quick start](#quick-start) · [Credentials](#credentials-what-youll-be-asked-for-and-why) · [Features](#features) · [Self-hosted runners](docs/self-hosted-runners.md) · [Configuration](docs/configuration.md)
 
 </div>
@@ -160,8 +164,12 @@ Edit `~/.forge-ci/forge.env` and re-run the installer (or `docker restart forge-
 docker run -d --name forge-ci -p 8080:8080 \
   -e GITHUB_TOKEN=ghp_… -e FORGE_REPOS=owner/repo \
   -v forge-ci-data:/data --restart unless-stopped \
-  ghcr.io/codephilip/forge-ci:latest
+  ghcr.io/codephilip/forge-ci:0.1.0
 ```
+
+Image tags: `0.1.0` (fixed), `0.1` (patch updates), `latest` (tip of `main`).
+Changes are listed in [CHANGELOG.md](CHANGELOG.md); how releases are cut is in
+[docs/releasing.md](docs/releasing.md).
 
 Which credentials to use, and why: see **[Credentials](#credentials-what-youll-be-asked-for-and-why)**. Every setting: **[docs/configuration.md](docs/configuration.md)**.
 

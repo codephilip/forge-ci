@@ -638,7 +638,8 @@ function renderSide(){
     <dt>To</dt><dd>${esc(n.to.join(", ") || "–")}</dd>
     <dt>Fires on</dt><dd>${n.mode === "every" ? "every failure" : "pass→fail, recovery"}</dd>
     <dt>Runner offline</dt><dd>after grace period</dd>
-    <dt>Poll</dt><dd>every ${S.config.poll}s</dd>`;
+    <dt>Poll</dt><dd>every ${S.config.poll}s</dd>
+    <dt>Version</dt><dd>${esc(S.config.version || "dev")}</dd>`;
 }
 
 /* ---------------- views ---------------- */

@@ -38,6 +38,10 @@ from pathlib import Path
 
 log = logging.getLogger("forge")
 
+# Bumped by hand at release time; see docs/releasing.md. The container image is
+# tagged with the same number by CI when the matching git tag is pushed.
+VERSION = "0.1.0"
+
 
 def _csv(name, default=""):
     return [x.strip() for x in os.environ.get(name, default).split(",") if x.strip()]
@@ -1153,6 +1157,7 @@ def build_snapshot():
             "notify": {"enabled": notifications_enabled(), "to": CFG["notify_to"],
                        "mode": CFG["notify_mode"], "via": "resend" if CFG["resend_key"] else ("smtp" if CFG["smtp_host"] else None)},
             "token": bool(CFG["token"]),
+            "version": VERSION,
         },
         "rate": S.rate, "last_poll": S.last_poll,
         "errors": [{"source": k, **v} for k, v in S.errors.items()],
@@ -1268,7 +1273,7 @@ class Handler(BaseHTTPRequestHandler):
         if path in ("/", "/index.html"):
             self._send(200, Path(CFG["static"]).read_bytes(), "text/html; charset=utf-8")
         elif path == "/healthz":
-            self._send(200, b'{"ok":true}')
+            self._send(200, json.dumps({"ok": True, "version": VERSION}).encode())
         elif path == "/api/state":
             self._send(200, S.snapshot)
         elif path.startswith("/api/runs/"):
