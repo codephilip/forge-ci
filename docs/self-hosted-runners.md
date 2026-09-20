@@ -6,6 +6,19 @@ and what to keep on GitHub-hosted runners.
 
 None of this is required to use Forge — it reads GitHub-hosted runs just as well.
 
+## What moving to your own runners changes
+
+| | Before | After |
+|---|---|---|
+| Triggers the run, stores logs, shows the check | GitHub | **GitHub** (unchanged) |
+| Executes the job | a machine GitHub rents you | **your machine** |
+| Cost per minute | ~$0.006 | **nothing** |
+| Works while GitHub is down | no | **no** — GitHub still schedules every run |
+
+Self-hosted runners are a GitHub Actions feature, not a way to leave GitHub.
+Your workflows, your pull-request checks and your logs stay exactly where they
+are; only the hardware changes.
+
 ## What a self-hosted runner is
 
 A small program (`actions/runner`) that runs on a machine you own. It opens an

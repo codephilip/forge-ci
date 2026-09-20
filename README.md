@@ -2,7 +2,9 @@
 
 # ⚡ Forge
 
-**A live dashboard, test tracker and failure alerter for GitHub Actions, with an AI that explains any job in plain English.**
+**The dashboard for GitHub Actions when the jobs run on your own machines.**
+
+Live runs · test history · runner health · failure alerts · plain-English explanations
 
 One container · no build step · works with GitHub-hosted and self-hosted runners
 
@@ -10,21 +12,36 @@ One container · no build step · works with GitHub-hosted and self-hosted runne
 [![CI](https://github.com/codephilip/forge-ci/actions/workflows/ci.yml/badge.svg)](https://github.com/codephilip/forge-ci/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
 
-[What it is](#what-it-is) · [Quick start](#quick-start) · [Credentials](#credentials-what-youll-be-asked-for-and-why) · [Features](#features) · [Self-hosted runners](docs/self-hosted-runners.md) · [Configuration](docs/configuration.md)
+[Why it exists](#why-it-exists) · [What it is](#what-it-is) · [Quick start](#quick-start) · [Credentials](#credentials-what-youll-be-asked-for-and-why) · [Features](#features) · [Self-hosted runners](docs/self-hosted-runners.md) · [Configuration](docs/configuration.md)
 
 </div>
 
 ![Forge overview: live stats, runner fleet with host health, runs and workflow health](docs/screenshots/overview.png)
 
+## Why it exists
+
+GitHub Actions runs your CI on machines GitHub rents you, billed by the minute. That cost grows with the project, and when a spending limit is reached, jobs stop starting.
+
+GitHub supports a fix for that, called a **self-hosted runner**: a small program you run on your own machine that asks GitHub for jobs and executes them. The minutes are then free. **GitHub still runs the show** — it triggers every run, decides which jobs to send, stores the logs and shows the green tick on your pull request. Only the machine doing the work changes.
+
+That move creates a new blind spot. GitHub's Actions tab is per-repository and knows nothing about your machine: whether the runner is online, how loaded it is, or what your own minutes saved you. It also can't tell you a test has been flaky for a week, and it won't email you when `main` goes red.
+
+Forge fills that gap. It watches the CI across all your repositories from a container on your own server, tracks every test suite over time, shows your runners next to the jobs they ran, and explains failures in plain English for people who don't read build logs.
+
 ## What it is
 
 Forge reads the GitHub Actions API for the repositories you list and shows what it finds: runs in progress, every test suite's history, which runner each job used, and what your self-hosted minutes would have cost on GitHub's. It emails when a workflow breaks or recovers, and can explain any job in plain English using the Anthropic API.
 
-It does not run CI. GitHub still triggers the runs and stores the logs; the jobs still execute on a runner — either one GitHub rents you, or one of your own.
+**It does not run CI, and it isn't a way to leave GitHub.** GitHub still triggers the runs and stores the logs; the jobs still execute on a runner — either one GitHub rents you, or one of your own. Forge reads the result. Switch Forge off and your CI is unaffected.
 
 ![How Forge fits: GitHub triggers runs and sends each job to a GitHub-hosted or self-hosted runner; Forge reads the API from your own server](docs/diagrams/arch-system.png)
 
-Forge was written to sit on top of **self-hosted runners**, which is why it tracks runner state, runner-host CPU, memory and disk, and the cost difference per minute. It works the same way if every job runs on GitHub-hosted runners — the savings figures are simply zero. Setting up your own runners, and moving a job onto them, is covered in **[docs/self-hosted-runners.md](docs/self-hosted-runners.md)**.
+| Question | Answer |
+|---|---|
+| Does it replace GitHub Actions, Jenkins or CircleCI? | No. It reads GitHub Actions; it runs nothing. |
+| Do I need self-hosted runners to use it? | No. Everything works with GitHub-hosted runners; the savings figures just read zero. |
+| Does it work without GitHub? | No. GitHub Actions only, today. |
+| Can it run my jobs when GitHub is down? | No. If GitHub is down, nothing runs anywhere and Forge shows the last state it saw. |
 
 ## Quick start
 
@@ -55,6 +72,41 @@ GITHUB_TOKEN=ghp_… FORGE_REPOS=owner/repo,owner/other \
 Flags: `--yes` (no prompts), `--reconfigure`, `--uninstall` (keeps data), `--purge` (removes data and config).
 Environment: `FORGE_PORT` (default 8080), `FORGE_IMAGE`, `FORGE_CONF_DIR`.
 </details>
+
+## Running jobs on your own machines
+
+Optional, and independent of Forge — but it's what Forge was built for. Three steps:
+
+**1. Add a runner to the machine.** In the repo or org: **Settings → Actions → Runners → New runner**, then run the commands GitHub shows you. Give it labels you'll target, and install it as a service:
+
+```bash
+./config.sh --url https://github.com/OWNER/REPO --token <registration token> \
+            --name build-box --labels self-hosted,linux,build-box --unattended
+sudo ./svc.sh install && sudo ./svc.sh start
+```
+
+**2. Point a job at it** — one line in that project's workflow file:
+
+```yaml
+jobs:
+  test:
+    runs-on: [self-hosted, build-box]   # was: ubuntu-latest
+```
+
+**3. Tell Forge to show it:**
+
+```bash
+FORGE_RUNNER_REPOS=owner/repo    # or FORGE_ORGS=my-org for an org-wide runner
+```
+
+The runner now appears in Forge's fleet strip, its jobs are tagged with your
+label instead of `github`, and **Saved · 7d** starts counting.
+
+Keeping it repeatable (Ansible), running several runners on one box, a kill
+switch that sends every job back to GitHub in one click, and which jobs should
+*stay* on GitHub-hosted runners (anything using secrets) are all in
+**[docs/self-hosted-runners.md](docs/self-hosted-runners.md)**. The machines this
+was built on are public too: **[github.com/codephilip/homelab](https://github.com/codephilip/homelab)**.
 
 ## Credentials: what you'll be asked for, and why
 
