@@ -72,21 +72,10 @@ by token. Requests use server-side refusal fallbacks, so a declined request is
 retried on a fallback model instead of failing. First explanations are cached
 per item and result in SQLite.
 
-## Why jobs that use secrets shouldn't run on self-hosted runners
+## Runners
 
-A self-hosted runner's disk and Docker cache **survive between jobs**. A job
-that writes a credential to disk (a kubeconfig, a `.env` file, a registry
-login) can leave it for the next job to find, and a public repo's pull
-requests from forks can run arbitrary code on the machine. The pattern Forge
-was built around:
-
-- **Self-hosted:** lint, typecheck, unit tests, database migrations against a
-  throwaway database. These are the bulk of CI minutes, and none of them needs
-  secrets.
-- **GitHub-hosted:** image builds that push to a registry, deploys, and anything
-  that monitors production (it must not depend on your own infrastructure
-  being up).
-
-In the project this came from, that split moved roughly half of the monthly
-Actions minutes to a free runner, and with a little more work would have kept
-the rest inside GitHub's free tier.
+Which machine a job runs on is decided by `runs-on:` in the project's own
+workflow, not by Forge. Setting up your own runners, pointing a project at them,
+and which jobs should stay on GitHub-hosted runners (anything using secrets, and
+anything watching production) are covered in
+[self-hosted-runners.md](self-hosted-runners.md).

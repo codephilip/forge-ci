@@ -6,15 +6,21 @@
 
 One container · no build step · works with GitHub-hosted and self-hosted runners
 
-[Quick start](#quick-start) · [Credentials](#credentials-what-youll-be-asked-for-and-why) · [Features](#features) · [Install options](#install-options) · [Configuration](docs/configuration.md) · [How it works](docs/how-it-works.md)
+[What it is](#what-it-is) · [Quick start](#quick-start) · [Credentials](#credentials-what-youll-be-asked-for-and-why) · [Features](#features) · [Self-hosted runners](docs/self-hosted-runners.md) · [Configuration](docs/configuration.md)
 
 </div>
 
 ![Forge overview: live stats, runner fleet with host health, runs and workflow health](docs/screenshots/overview.png)
 
-GitHub's Actions tab shows you one repository at a time and says nothing when something breaks at 2 a.m. Forge watches all your repos at once, shows what's running right now, tracks every test suite over time, emails you when a workflow goes red (and when it's green again), and lets anyone on the team press ✦ to get a plain-English answer to *"what is this job and why did it fail?"*
+## What it is
 
-I built it to run CI for my own projects on a self-hosted runner in my homelab. That's why it also tracks runner health and **how much each self-hosted minute saves** compared with GitHub-hosted pricing.
+Forge reads the GitHub Actions API for the repositories you list and shows what it finds: runs in progress, every test suite's history, which runner each job used, and what your self-hosted minutes would have cost on GitHub's. It emails when a workflow breaks or recovers, and can explain any job in plain English using the Anthropic API.
+
+It does not run CI. GitHub still triggers the runs and stores the logs; the jobs still execute on a runner — either one GitHub rents you, or one of your own.
+
+![How Forge fits: GitHub triggers runs and sends each job to a GitHub-hosted or self-hosted runner; Forge reads the API from your own server](docs/diagrams/arch-system.png)
+
+Forge was written to sit on top of **self-hosted runners**, which is why it tracks runner state, runner-host CPU, memory and disk, and the cost difference per minute. It works the same way if every job runs on GitHub-hosted runners — the savings figures are simply zero. Setting up your own runners, and moving a job onto them, is covered in **[docs/self-hosted-runners.md](docs/self-hosted-runners.md)**.
 
 ## Quick start
 
@@ -168,24 +174,16 @@ Which credentials to use, and why: see **[Credentials](#credentials-what-youll-b
 
 ## How it works
 
-```mermaid
-flowchart LR
-  GH[(GitHub API)] -- "runs, jobs, runners, logs<br/>ETag polling" --> F
-  P[(Prometheus<br/>optional)] -- runner host CPU / mem / disk --> F
-  subgraph F [Forge — one Python process]
-    S[sync loops] --> DB[(SQLite)]
-    DB --> SNAP[snapshot] -- server-sent events --> UI[browser UI]
-    DB --> N[alert rules] --> MAIL[Resend / SMTP]
-    UI -- "✦ explain / chat" --> AI[context builder] --> A[(Anthropic API)]
-  end
-```
+![Inside Forge: sync loops read the GitHub API into SQLite, a snapshot is pushed to the browser, and the same data drives email alerts and AI explanations](docs/diagrams/arch-inside.png)
 
 - **Polling with ETags instead of webhooks.** Forge works from behind a NAT with no public endpoint. Unchanged responses come back as `304 Not Modified`, which don't count against GitHub's rate limit, so watching a handful of busy repos uses a few hundred requests an hour out of 5,000.
 - **SQLite and a single process.** One container, one volume, no database server to run. History is kept for 45 days.
 - **Server-sent events.** The browser receives a new snapshot only when something actually changed; timers tick on the client.
 - **The server uses only the Python standard library.** The Anthropic SDK is the one optional dependency, which keeps the image small and the code easy to read.
 
-More detail, including why jobs that use secrets shouldn't run on self-hosted runners, is in **[docs/how-it-works.md](docs/how-it-works.md)**.
+More detail is in **[docs/how-it-works.md](docs/how-it-works.md)**; the runner side is in **[docs/self-hosted-runners.md](docs/self-hosted-runners.md)**, including why jobs that use secrets should stay on GitHub-hosted runners.
+
+*Both diagrams were generated with Nano Banana Pro (Gemini 3 Pro Image).*
 
 ## Development
 
