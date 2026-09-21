@@ -90,7 +90,17 @@ header{position:sticky;top:0;z-index:20;backdrop-filter:blur(14px) saturate(140%
 .runner.offline{border-color:rgba(255,93,108,.35)}
 .runner .job{margin-top:10px;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .runner .job b{color:var(--text);font-weight:600}
-.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.chips{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:10px}
+/* One-line explainer above the runner strip. */
+.sechead{display:flex;align-items:baseline;gap:14px;margin:4px 2px 8px;min-width:0}
+.sechead h2{margin:0;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;white-space:nowrap}
+.sechead .count{font:500 12px var(--mono);color:var(--muted);letter-spacing:0;text-transform:none;margin-left:8px}
+.sechead .hint{font-size:12px;color:var(--dim);min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sechead .hint code{font:11px var(--mono);color:var(--muted)}
+/* MACHINE / RUNNER tag and the "labels" caption on each card. */
+.runner .kind{font:700 9.5px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.runner.host .kind{color:#8ea2ff}
+.chips .k{font:600 9.5px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-right:1px}
 .chip{font:500 10.5px var(--mono);padding:2px 7px;border-radius:5px;background:var(--bg2);border:1px solid var(--line);color:var(--muted)}
 .chip.hl{color:#ffcfae;border-color:rgba(255,122,61,.35);background:rgba(255,122,61,.08)}
 .host .meters{display:grid;gap:9px;margin-top:12px}
@@ -277,9 +287,10 @@ input[type=search]{flex:1;min-width:140px}
 .sdetail .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .sdetail a.btn{text-decoration:none}
 
-@media (max-width:1100px){.grid{grid-template-columns:1fr}.hero{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:1100px){.grid{grid-template-columns:minmax(0,1fr)}.hero{grid-template-columns:repeat(3,minmax(0,1fr))}
   .suite{grid-template-columns:26px minmax(0,1fr) 120px 60px 30px}.suite .beadcol{display:none}}
-@media (max-width:640px){.suite{grid-template-columns:22px minmax(0,1fr) 54px 30px}.suite .cntcol{display:none}.sdetail{padding-left:18px}
+@media (max-width:640px){.sechead .hint{display:none}
+  .suite{grid-template-columns:22px minmax(0,1fr) 54px 30px}.suite .cntcol{display:none}.sdetail{padding-left:18px}
   .bar{gap:10px}.tabs a{padding:6px 10px}
   .hero{grid-template-columns:repeat(2,minmax(0,1fr))}.stat .v{font-size:26px}.ring{display:none}
   .detail{padding-left:18px}.wrow{grid-template-columns:110px 1fr 56px}.flight{grid-template-columns:1fr}}
@@ -314,6 +325,10 @@ input[type=search]{flex:1;min-width:140px}
     <div class="stat" id="st-save" title="What the jobs that ran on self-hosted runners would have cost on GitHub-hosted runners"><div class="k">Saved · 7d</div><div class="v pass mono">–</div><div class="s">–</div></div>
   </section>
 
+  <div class="sechead" id="fleet-head" title="Machines that pick up jobs from GitHub and run them. Chips are the labels a workflow targets with runs-on:">
+    <h2>Runners<span class="count" id="fleet-count"></span></h2>
+    <span class="hint">Machines that pick up jobs from GitHub and run them. Chips are the <b>labels</b> a workflow targets with <code>runs-on:</code></span>
+  </div>
   <section class="fleet" id="fleet"></section>
 
   <div class="grid">
@@ -514,12 +529,17 @@ function sparkline(vals, color){
     <defs><linearGradient id="${id}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".35"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
     <path d="${d} L${w} ${h} L0 ${h}Z" fill="url(#${id})"/><path d="${d}" fill="none" stroke="${color}" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>`;
 }
+// "repo:owner/name" -> "serves owner/name"; "org:acme" -> "serves the acme org"
+function scopeText(scope){
+  const [kind, target] = String(scope).split(/:(.*)/s);
+  return kind === "org" ? `serves the ${esc(target)} org` : `serves ${esc(target || scope)}`;
+}
 function renderFleet(){
   const h = S.host || {};
   const gb = b => b ? (b/1073741824).toFixed(b > 20*1073741824 ? 0 : 1) + "G" : "";
   const meter = (l, v, extra="") => `<div class="meter"><span class="l">${l}</span><span class="t"><span class="f" style="width:${Math.min(100,v||0)}%;background-position:${-(Math.min(100,v||0))*2}px 0"></span></span><span class="n">${v==null?"–":Math.round(v)+"%"}</span></div>`;
   let html = h.configured === false ? "" : `<div class="runner host ${h.ok ? "" : "offline"}">
-    <div class="top"><div><div class="nm">${esc(h.label || S.config.host_label)}</div><div class="sc">host · ${h.cores ? h.cores + " cores · " + gb(h.mem_total) + " RAM · " + gb(h.disk_total) + " disk" : "no metrics"}</div></div>
+    <div class="top"><div><div class="kind">Machine</div><div class="nm">${esc(h.label || S.config.host_label)}</div><div class="sc">hosts the runners · ${h.cores ? h.cores + " cores · " + gb(h.mem_total) + " RAM · " + gb(h.disk_total) + " disk" : "no metrics"}</div></div>
     <span class="state ${h.ok ? "idle" : "offline"}">${h.ok ? "load " + (h.load ?? 0).toFixed(2) : "no data"}</span></div>
     <div class="meters">${meter("CPU", h.cpu)}${meter("MEM", h.mem)}${meter("DISK", h.disk)}</div>
     ${sparkline(h.cpu_series, "#ffb547")}</div>`;
@@ -528,12 +548,17 @@ function renderFleet(){
     const st = r.status === "offline" ? "offline" : r.busy ? "busy" : "idle";
     const util = Math.round(100 * (busy[r.name] || 0) / 86400);
     html += `<div class="runner ${st}">
-      <div class="top"><div><div class="nm">${esc(r.name)}</div><div class="sc">${esc(r.scope)} · ${util}% busy 24h</div></div>
+      <div class="top"><div><div class="kind">Runner</div><div class="nm">${esc(r.name)}</div><div class="sc">${scopeText(r.scope)} · ${util}% busy 24h</div></div>
       <span class="state ${st}">${st}</span>${aiBtn("runner", r.name, "runner " + r.name, true)}</div>
       <div class="job">${r.current ? `<a href="${esc(r.current.url)}" target="_blank"><b>${esc(r.current.name)}</b> · ${esc(short(r.current.repo))} · <span class="mono" data-since="${esc(r.current.started_at)}"></span></a>`
         : st === "offline" ? `offline ${r.offline_since ? "for <span class=mono data-since-epoch=" + r.offline_since + "></span>" : ""}` : "waiting for work"}</div>
-      <div class="chips">${r.labels.filter(l => !["self-hosted","Linux","X64"].includes(l)).map(l => `<span class="chip ${l===S.config.host_label?"hl":""}">${esc(l)}</span>`).join("")}</div></div>`;
+      <div class="chips" title="runs-on labels: ${esc(r.labels.join(", "))}"><span class="k">labels</span>${
+        r.labels.filter(l => !["self-hosted","Linux","X64"].includes(l)).map(l =>
+          `<span class="chip ${l===S.config.host_label?"hl":""}" ${l===S.config.host_label?'title="Matches this dashboard\'s host label"':""}>${esc(l)}</span>`).join("")
+      }</div></div>`;
   }
+  const machines = h.configured === false ? 0 : 1;
+  $("#fleet-count").textContent = (machines ? "1 machine · " : "") + S.runners.length + (S.runners.length === 1 ? " runner" : " runners");
   if (!S.runners.length) html += `<div class="runner"><div class="nm">No self-hosted runners</div><div class="job" style="white-space:normal">Jobs run on GitHub-hosted runners. To list your own runners, the token needs admin access to the repo or org (see docs/configuration.md).</div></div>`;
   $("#fleet").innerHTML = html;
 }

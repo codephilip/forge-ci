@@ -40,7 +40,7 @@ log = logging.getLogger("forge")
 
 # Bumped by hand at release time; see docs/releasing.md. The container image is
 # tagged with the same number by CI when the matching git tag is pushed.
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 
 
 def _csv(name, default=""):

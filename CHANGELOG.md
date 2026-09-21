@@ -10,6 +10,25 @@ migration step.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-21
+
+### Changed
+
+- The runner strip explains itself: a one-line **Runners** header with the
+  machine and runner count and what the cards are, a **Machine** / **Runner**
+  tag on each card so the host can't be mistaken for a runner, the scope in
+  plain words (`serves owner/repo`, `serves the acme org` instead of
+  `repo:owner/repo`, `org:acme`), and a **labels** caption on the chips with a
+  tooltip listing every label, including the hidden `self-hosted`, `Linux` and
+  `X64`.
+
+### Fixed
+
+- A runner card's AI button could be pushed past the card's edge and clipped
+  when a long scope name made the title row too wide.
+- On phones the FLAKY badge overflowed its row, and the runs column was a few
+  pixels wider than the screen, so the page scrolled sideways.
+
 ## [0.1.0] - 2026-09-20
 
 First public release.
@@ -47,5 +66,6 @@ First public release.
 - Test counts come from log summaries; unrecognised runners still show pass/fail
   without counts.
 
-[Unreleased]: https://github.com/codephilip/forge-ci/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/codephilip/forge-ci/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/codephilip/forge-ci/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/codephilip/forge-ci/releases/tag/v0.1.0

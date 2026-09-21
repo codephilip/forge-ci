@@ -216,10 +216,10 @@ Edit `~/.forge-ci/forge.env` and re-run the installer (or `docker restart forge-
 docker run -d --name forge-ci -p 8080:8080 \
   -e GITHUB_TOKEN=ghp_… -e FORGE_REPOS=owner/repo \
   -v forge-ci-data:/data --restart unless-stopped \
-  ghcr.io/codephilip/forge-ci:0.1.0
+  ghcr.io/codephilip/forge-ci:0.1.1
 ```
 
-Image tags: `0.1.0` (fixed), `0.1` (patch updates), `latest` (tip of `main`).
+Image tags: `0.1.1` (fixed), `0.1` (patch updates), `latest` (tip of `main`).
 Changes are listed in [CHANGELOG.md](CHANGELOG.md); how releases are cut is in
 [docs/releasing.md](docs/releasing.md).
 
